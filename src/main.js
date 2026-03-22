@@ -11,9 +11,9 @@ import { updateTrustPanel, updateReputation, updateProximityPrompt } from './hud
 
 // Start screen
 document.getElementById('start-btn').addEventListener('click', () => {
-  const key = document.getElementById('api-key-input').value.trim();
-  if (!key) return;
-  sessionStorage.setItem('anthropic_key', key);
+  const keyInput = document.getElementById('api-key-input');
+  const key = keyInput ? keyInput.value.trim() : '';
+  if (key) sessionStorage.setItem('anthropic_key', key);
   document.getElementById('start-screen').style.display = 'none';
   document.getElementById('hud').style.display = 'block';
   state.sessions++;

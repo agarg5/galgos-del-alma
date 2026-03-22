@@ -16,9 +16,12 @@
   <p class="description">
     Every year after hunting season ends in Spain, thousands of galgos — Spanish greyhounds — are abandoned by their owners. Left in fields, tied to trees, or worse. In this world, you are a volunteer. Walk the golden dehesa, earn the trust of three frightened galgos, and speak with the people of the village. There are no enemies here — only fear, and the slow medicine of kindness.
   </p>
-  <input type="password" id="api-key-input" placeholder="Enter your Anthropic API key" />
   <button id="start-btn">Begin</button>
-  <p class="note">Your key is stored only in this browser tab and sent only to the Anthropic API.</p>
+  <details style="margin-top: 1rem; max-width: 340px; text-align: center;">
+    <summary style="font-family: 'Source Serif 4', serif; font-size: 0.85rem; color: #8B7355; cursor: pointer;">Use your own API key (optional)</summary>
+    <input type="password" id="api-key-input" placeholder="Enter your Anthropic API key" style="margin-top: 0.75rem;" />
+    <p class="note">Your key is stored only in this browser tab.</p>
+  </details>
 </div>
 
 <!-- HUD -->

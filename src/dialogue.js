@@ -51,22 +51,33 @@ export async function sendMessage() {
 
   try {
     const apiKey = sessionStorage.getItem('anthropic_key');
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 300,
-        system: systemPrompt,
-        messages: state.currentNPC.history.slice(-20),
-        stream: true,
-      }),
-    });
+    const useProxy = !apiKey;
+
+    const res = useProxy
+      ? await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            system: systemPrompt,
+            messages: state.currentNPC.history.slice(-20),
+          }),
+        })
+      : await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true',
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 300,
+            system: systemPrompt,
+            messages: state.currentNPC.history.slice(-20),
+            stream: true,
+          }),
+        });
 
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
