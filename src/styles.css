@@ -1,0 +1,156 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { overflow: hidden; background: #2C1A0E; font-family: 'Source Serif 4', serif; }
+canvas { display: block; }
+
+/* START SCREEN */
+#start-screen {
+  position: fixed; inset: 0; z-index: 100;
+  background: linear-gradient(170deg, #F5EED8 0%, #E8D5B0 50%, #D4A96A 100%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  color: #2C1A0E;
+}
+#start-screen h1 {
+  font-family: 'Playfair Display', serif; font-size: 3.5rem; font-weight: 700;
+  margin-bottom: 0.25rem; letter-spacing: 0.02em;
+}
+#start-screen .subtitle {
+  font-family: 'Playfair Display', serif; font-style: italic; font-size: 1.1rem;
+  color: #6B4226; margin-bottom: 2rem;
+}
+#start-screen .description {
+  max-width: 520px; text-align: center; line-height: 1.7; font-size: 0.95rem;
+  color: #4A3520; margin-bottom: 2rem;
+}
+#start-screen input {
+  width: 340px; padding: 12px 16px; border: 2px solid #C4A35A; border-radius: 8px;
+  background: rgba(255,255,255,0.6); font-family: 'Source Serif 4', serif; font-size: 1rem;
+  color: #2C1A0E; outline: none; margin-bottom: 1rem;
+}
+#start-screen input::placeholder { color: #8B7355; }
+#start-screen input:focus { border-color: #B85C38; background: rgba(255,255,255,0.85); }
+#start-screen button {
+  padding: 14px 48px; background: #B85C38; color: #F5EED8; border: none; border-radius: 8px;
+  font-family: 'Playfair Display', serif; font-size: 1.15rem; cursor: pointer;
+  transition: background 0.2s;
+}
+#start-screen button:hover { background: #9A4A2E; }
+#start-screen .note {
+  margin-top: 1rem; font-size: 0.8rem; color: #8B7355; font-style: italic;
+}
+
+/* HUD */
+#hud { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
+#zone-indicator {
+  position: absolute; top: 20px; left: 20px;
+  font-family: 'Playfair Display', serif; font-size: 1.1rem; color: #F5EED8;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+}
+#trust-panel {
+  position: absolute; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 8px;
+}
+.trust-bar-container {
+  display: flex; align-items: center; gap: 8px;
+}
+.trust-name {
+  font-family: 'Playfair Display', serif; font-size: 0.85rem; color: #F5EED8;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.6); min-width: 60px; text-align: right;
+}
+.trust-bar-bg {
+  width: 100px; height: 8px; background: rgba(0,0,0,0.4); border-radius: 4px; overflow: hidden;
+}
+.trust-bar-fill {
+  height: 100%; background: linear-gradient(90deg, #B85C38, #C4A35A); border-radius: 4px;
+  transition: width 0.5s ease;
+}
+#interact-prompt {
+  position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%);
+  font-family: 'Source Serif 4', serif; font-size: 1rem; color: #F5EED8;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.7);
+  background: rgba(44,26,14,0.5); padding: 8px 20px; border-radius: 20px;
+  opacity: 0; transition: opacity 0.3s;
+}
+#interact-prompt.visible { opacity: 1; }
+#reputation {
+  position: absolute; bottom: 20px; right: 20px;
+  font-family: 'Source Serif 4', serif; font-size: 0.8rem; color: #C4A35A;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+}
+
+/* CARE MENU */
+#care-menu {
+  position: fixed; z-index: 30; display: none;
+  left: 50%; top: 50%; transform: translate(-50%, -50%);
+  background: rgba(245,238,216,0.95); border-radius: 16px; padding: 24px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4); pointer-events: auto;
+}
+#care-menu h3 {
+  font-family: 'Playfair Display', serif; text-align: center; color: #2C1A0E;
+  margin-bottom: 16px;
+}
+#care-menu .care-btn {
+  display: block; width: 100%; padding: 10px 16px; margin-bottom: 8px;
+  background: #B85C38; color: #F5EED8; border: none; border-radius: 8px;
+  font-family: 'Source Serif 4', serif; font-size: 0.95rem; cursor: pointer;
+  transition: background 0.2s;
+}
+#care-menu .care-btn:hover { background: #9A4A2E; }
+#care-menu .care-btn:disabled { background: #999; cursor: not-allowed; }
+#care-menu .care-close {
+  display: block; width: 100%; padding: 8px; margin-top: 4px;
+  background: transparent; color: #8B7355; border: 1px solid #C4A35A; border-radius: 8px;
+  font-family: 'Source Serif 4', serif; cursor: pointer;
+}
+
+/* DIALOGUE */
+#dialogue-overlay {
+  position: fixed; inset: 0; z-index: 40; display: none;
+  background: rgba(0,0,0,0.4);
+}
+#dialogue-panel {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 35vh; min-height: 240px;
+  background: linear-gradient(180deg, #F5EED8 0%, #EDE0C8 100%);
+  border-top: 3px solid #C4A35A; padding: 16px 24px; display: flex; flex-direction: column;
+}
+#dialogue-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
+}
+#dialogue-npc-name {
+  font-family: 'Playfair Display', serif; font-size: 1.2rem; color: #2C1A0E; font-weight: 700;
+}
+#dialogue-close {
+  background: transparent; border: 1px solid #C4A35A; border-radius: 6px;
+  padding: 4px 14px; font-family: 'Source Serif 4', serif; color: #8B7355; cursor: pointer;
+}
+#dialogue-history {
+  flex: 1; overflow-y: auto; margin-bottom: 12px; padding-right: 8px;
+}
+#dialogue-history::-webkit-scrollbar { width: 6px; }
+#dialogue-history::-webkit-scrollbar-thumb { background: #C4A35A; border-radius: 3px; }
+.msg { margin-bottom: 10px; line-height: 1.6; }
+.msg.npc {
+  font-family: 'Playfair Display', serif; color: #2C1A0E; font-style: italic;
+}
+.msg.player {
+  font-family: 'Source Serif 4', serif; color: #6B4226; text-align: right;
+}
+#dialogue-input-row { display: flex; gap: 8px; }
+#dialogue-input {
+  flex: 1; padding: 10px 14px; border: 2px solid #C4A35A; border-radius: 8px;
+  background: rgba(255,255,255,0.6); font-family: 'Source Serif 4', serif; font-size: 0.95rem;
+  color: #2C1A0E; outline: none;
+}
+#dialogue-input:focus { border-color: #B85C38; }
+#dialogue-send {
+  padding: 10px 20px; background: #B85C38; color: #F5EED8; border: none; border-radius: 8px;
+  font-family: 'Playfair Display', serif; cursor: pointer;
+}
+#dialogue-send:disabled { background: #999; }
+
+/* MILESTONE */
+#milestone {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  z-index: 50; display: none;
+  font-family: 'Playfair Display', serif; font-size: 1.3rem; color: #F5EED8;
+  background: rgba(184,92,56,0.9); padding: 20px 40px; border-radius: 12px;
+  text-align: center; box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+}

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Galgos del Alma</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/styles.css">
+</head>
+<body>
+
+<!-- START SCREEN -->
+<div id="start-screen">
+  <h1>Galgos del Alma</h1>
+  <p class="subtitle">A story of patience, compassion, and trust</p>
+  <p class="description">
+    Every year after hunting season ends in Spain, thousands of galgos — Spanish greyhounds — are abandoned by their owners. Left in fields, tied to trees, or worse. In this world, you are a volunteer. Walk the golden dehesa, earn the trust of three frightened galgos, and speak with the people of the village. There are no enemies here — only fear, and the slow medicine of kindness.
+  </p>
+  <input type="password" id="api-key-input" placeholder="Enter your Anthropic API key" />
+  <button id="start-btn">Begin</button>
+  <p class="note">Your key is stored only in this browser tab and sent only to the Anthropic API.</p>
+</div>
+
+<!-- HUD -->
+<div id="hud" style="display:none;">
+  <div id="zone-indicator">La Dehesa</div>
+  <div id="trust-panel"></div>
+  <div id="interact-prompt">Press E to interact</div>
+  <div id="reputation">Village standing: 0 / 100</div>
+</div>
+
+<!-- CARE MENU -->
+<div id="care-menu">
+  <h3 id="care-galgo-name"></h3>
+  <button class="care-btn" id="care-sit">Sit nearby quietly (+3 trust)</button>
+  <button class="care-btn" id="care-food">Offer food (+8 trust)</button>
+  <button class="care-btn" id="care-touch">Gentle touch (+12 trust)</button>
+  <button class="care-close" id="care-close-btn">Walk away</button>
+</div>
+
+<!-- DIALOGUE -->
+<div id="dialogue-overlay">
+  <div id="dialogue-panel">
+    <div id="dialogue-header">
+      <span id="dialogue-npc-name"></span>
+      <button id="dialogue-close">End conversation</button>
+    </div>
+    <div id="dialogue-history"></div>
+    <div id="dialogue-input-row">
+      <input type="text" id="dialogue-input" placeholder="Speak..." />
+      <button id="dialogue-send">Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- MILESTONE -->
+<div id="milestone"></div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
