@@ -34,6 +34,11 @@ canvas { display: block; }
   transition: background 0.2s;
 }
 #start-screen button:hover { background: #9A4A2E; }
+#start-screen #reset-btn {
+  margin-top: 0.75rem; padding: 8px 24px; background: transparent;
+  color: #8B7355; border: 1px solid #C4A35A; font-size: 0.9rem;
+}
+#start-screen #reset-btn:hover { background: rgba(184,92,56,0.12); }
 #start-screen .note {
   margin-top: 1rem; font-size: 0.8rem; color: #8B7355; font-style: italic;
 }

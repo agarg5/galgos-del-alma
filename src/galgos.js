@@ -9,36 +9,81 @@ import { requestWhisper } from './dialogue.js';
 function makeGalgoMesh(color) {
   const g = new THREE.Group();
   const mat = new THREE.MeshLambertMaterial({ color });
-  const body = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.7, 0.7), mat);
-  body.position.y = 1.2;
-  body.castShadow = true;
-  g.add(body);
-  const head = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.5, 0.4), mat);
-  head.position.set(1.4, 1.5, 0);
+
+  // Deep chest tapering to a tucked waist — the signature sighthound line
+  const chest = new THREE.Mesh(new THREE.SphereGeometry(0.48, 14, 10), mat);
+  chest.scale.set(1.15, 1.05, 0.72);
+  chest.position.set(0.55, 1.25, 0);
+  chest.castShadow = true;
+  g.add(chest);
+  const barrel = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.32, 0.44, 1.1, 12),
+    mat
+  );
+  barrel.rotation.z = Math.PI / 2;
+  barrel.rotation.y = 0.06;
+  barrel.position.set(-0.05, 1.32, 0);
+  barrel.castShadow = true;
+  g.add(barrel);
+  const hips = new THREE.Mesh(new THREE.SphereGeometry(0.36, 12, 9), mat);
+  hips.scale.set(1.15, 1, 0.7);
+  hips.position.set(-0.72, 1.35, 0);
+  hips.castShadow = true;
+  g.add(hips);
+
+  // Long neck sloping up to a narrow head with a tapered muzzle
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.2, 0.75, 10), mat);
+  neck.position.set(1.05, 1.65, 0);
+  neck.rotation.z = -0.55;
+  neck.castShadow = true;
+  g.add(neck);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.19, 12, 9), mat);
+  head.scale.set(1.25, 1, 0.85);
+  head.position.set(1.38, 1.95, 0);
   g.add(head);
-  const snout = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.25, 0.3), mat);
-  snout.position.set(1.85, 1.4, 0);
-  g.add(snout);
-  const legGeo = new THREE.CylinderGeometry(0.08, 0.08, 1.0, 5);
-  const offsets = [[0.8, 0, 0.25], [0.8, 0, -0.25], [-0.8, 0, 0.25], [-0.8, 0, -0.25]];
-  offsets.forEach(([lx, , lz]) => {
-    const leg = new THREE.Mesh(legGeo, mat);
-    leg.position.set(lx, 0.5, lz);
-    leg.castShadow = true;
-    g.add(leg);
+  const muzzle = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.13, 0.45, 10), mat);
+  muzzle.rotation.z = -Math.PI / 2 + 0.12; // narrow end forward
+  muzzle.position.set(1.68, 1.9, 0);
+  g.add(muzzle);
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 6),
+    new THREE.MeshLambertMaterial({ color: 0x1A1A1A }));
+  nose.position.set(1.9, 1.92, 0);
+  g.add(nose);
+
+  // Slender two-segment legs
+  const upperGeo = new THREE.CylinderGeometry(0.07, 0.05, 0.55, 8);
+  const lowerGeo = new THREE.CylinderGeometry(0.045, 0.035, 0.6, 8);
+  const legXZ = [[0.62, 0.2], [0.62, -0.2], [-0.72, 0.2], [-0.72, -0.2]];
+  legXZ.forEach(([lx, lz]) => {
+    const upper = new THREE.Mesh(upperGeo, mat);
+    upper.position.set(lx, 0.85, lz);
+    upper.castShadow = true;
+    g.add(upper);
+    const lower = new THREE.Mesh(lowerGeo, mat);
+    lower.position.set(lx, 0.3, lz);
+    lower.castShadow = true;
+    g.add(lower);
   });
-  const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.02, 1.2, 5), mat);
-  tail.position.set(-1.6, 1.3, 0);
-  tail.rotation.z = -0.8;
+
+  // Tail hangs from its base at the hip; the trust animations swing it.
+  // rotation.z > 0 curls it forward under the belly (tucked), < 0 raises it
+  // behind; rotation.x wags it side to side.
+  const tailGeo = new THREE.CylinderGeometry(0.04, 0.015, 1.1, 8);
+  tailGeo.translate(0, -0.55, 0); // pivot at the base, not the middle
+  const tail = new THREE.Mesh(tailGeo, mat);
+  tail.position.set(-1.02, 1.45, 0);
+  tail.rotation.z = 0.5;
   tail.name = 'tail';
   g.add(tail);
-  const earGeo = new THREE.BoxGeometry(0.12, 0.3, 0.08);
+
+  // Rose ears
+  const earGeo = new THREE.ConeGeometry(0.07, 0.28, 7);
   const earL = new THREE.Mesh(earGeo, mat);
-  earL.position.set(1.3, 1.85, 0.18);
+  earL.position.set(1.28, 2.16, 0.12);
   earL.name = 'earL';
   g.add(earL);
   const earR = new THREE.Mesh(earGeo, mat);
-  earR.position.set(1.3, 1.85, -0.18);
+  earR.position.set(1.28, 2.16, -0.12);
   earR.name = 'earR';
   g.add(earR);
   return g;
@@ -129,7 +174,7 @@ export function updateGalgoBehavior(galgo, dt, playerPos) {
   const t = galgo.trust;
 
   if (t <= 25) {
-    tail.rotation.z = -0.8;
+    tail.rotation.set(0, 0, 0.65); // tucked under the belly
     earL.rotation.x = -0.5;
     earR.rotation.x = -0.5;
     galgo.mesh.scale.y = 0.85;
@@ -138,7 +183,7 @@ export function updateGalgoBehavior(galgo, dt, playerPos) {
       moveGalgo(galgo, 3, dt, true);
     }
   } else if (t <= 60) {
-    tail.rotation.z = -0.2;
+    tail.rotation.set(0, 0, 0.25); // low but not tucked
     earL.rotation.x = -0.2;
     earR.rotation.x = -0.2;
     galgo.mesh.scale.y = 0.95;
@@ -147,7 +192,7 @@ export function updateGalgoBehavior(galgo, dt, playerPos) {
       moveGalgo(galgo, 2, dt, true);
     }
   } else if (t <= 85) {
-    tail.rotation.z = 0.3;
+    tail.rotation.set(0, 0, -0.35); // raised behind
     earL.rotation.x = 0.1;
     earR.rotation.x = 0.1;
     galgo.mesh.scale.y = 1;
@@ -156,7 +201,9 @@ export function updateGalgoBehavior(galgo, dt, playerPos) {
       moveGalgo(galgo, 1.5, dt, true);
     }
   } else {
-    tail.rotation.z = Math.sin(Date.now() * 0.015) * 0.5;
+    // Raised and wagging side to side
+    tail.rotation.z = -0.45;
+    tail.rotation.x = Math.sin(Date.now() * 0.015) * 0.55;
     earL.rotation.x = 0.2;
     earR.rotation.x = 0.2;
     galgo.mesh.scale.y = 1;
