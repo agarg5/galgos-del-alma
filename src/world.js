@@ -247,10 +247,11 @@ export function buildWorld() {
     seg.position.set(x, terrainHeight(x, z) + 0.05, z);
     seg.scale.set(w, 1, d);
     // Tilt along the direction of travel to match the terrain slope
+    // (rotation.z > 0 raises the +x end; rotation.x > 0 lowers the +z end)
     if (axis === 'x') {
-      seg.rotation.set(0, 0, -Math.atan2(terrainHeight(x + 2, z) - terrainHeight(x - 2, z), 4));
+      seg.rotation.set(0, 0, Math.atan2(terrainHeight(x + 2, z) - terrainHeight(x - 2, z), 4));
     } else {
-      seg.rotation.set(Math.atan2(terrainHeight(x, z + 2) - terrainHeight(x, z - 2), 4), 0, 0);
+      seg.rotation.set(-Math.atan2(terrainHeight(x, z + 2) - terrainHeight(x, z - 2), 4), 0, 0);
     }
     seg.updateMatrix();
     roadMesh.setMatrixAt(i, seg.matrix);

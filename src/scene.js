@@ -6,7 +6,9 @@ export function initScene() {
   state.clock = new THREE.Timer();
   state.scene = new THREE.Scene();
   state.scene.background = new THREE.Color(0xF2C07A);
-  state.scene.fog = new THREE.Fog(0xE3AC6C, 90, 300);
+  // Fog color must match the sky dome's horizon color or a seam shows
+  // where fogged terrain meets the sky.
+  state.scene.fog = new THREE.Fog(0xF8D79A, 90, 300);
 
   // Renderer
   state.renderer = new THREE.WebGLRenderer({ antialias: true });
