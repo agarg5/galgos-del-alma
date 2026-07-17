@@ -1,7 +1,7 @@
 // Input handling: keyboard + mouse
 import { state } from './state.js';
-import { openDialogue, sendMessage } from './dialogue.js';
-import { openCareMenu } from './galgos.js';
+import { openDialogue, sendMessage, closeDialogue } from './dialogue.js';
+import { openCareMenu, closeCareMenu } from './galgos.js';
 
 function handleInteract() {
   const pp = state.player.position;
@@ -12,7 +12,7 @@ function handleInteract() {
     }
   }
   for (const g of state.galgos) {
-    if (g.mesh.position.distanceTo(pp) < 5) {
+    if (g.discovered && g.mesh.position.distanceTo(pp) < 5) {
       openCareMenu(g);
       return;
     }
@@ -21,12 +21,24 @@ function handleInteract() {
 
 export function setupInput() {
   document.addEventListener('keydown', e => {
+    const typing = e.target instanceof HTMLInputElement;
+
+    if (e.key === 'Escape') {
+      if (state.dialogueActive && !state.streaming) closeDialogue();
+      if (state.careMenuActive) closeCareMenu();
+      return;
+    }
+
+    if (typing) {
+      if (e.key === 'Enter' && state.dialogueActive) sendMessage();
+      return; // don't treat typed characters as movement/interaction
+    }
+
     state.keys[e.key.toLowerCase()] = true;
     if (e.key.toLowerCase() === 'e' && !state.dialogueActive && !state.careMenuActive) {
+      // preventDefault so the "e" doesn't land in the dialogue input we focus
+      e.preventDefault();
       handleInteract();
-    }
-    if (e.key === 'Enter' && state.dialogueActive) {
-      sendMessage();
     }
   });
 

@@ -154,3 +154,32 @@ canvas { display: block; }
   background: rgba(184,92,56,0.9); padding: 20px 40px; border-radius: 12px;
   text-align: center; box-shadow: 0 4px 24px rgba(0,0,0,0.4);
 }
+
+/* TUTORIAL HINT */
+#hint {
+  position: fixed; bottom: 20px; left: 20px; z-index: 45; display: none;
+  max-width: 340px; font-family: 'Source Serif 4', serif; font-size: 0.9rem;
+  color: #2C1A0E; background: rgba(245,238,216,0.92);
+  border-left: 3px solid #C4A35A; padding: 12px 16px; border-radius: 0 8px 8px 0;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3); line-height: 1.5;
+}
+
+/* GALGO WHISPER */
+#whisper {
+  position: fixed; top: 22%; left: 50%; transform: translateX(-50%);
+  z-index: 50; display: none; max-width: 440px;
+  font-family: 'Playfair Display', serif; font-style: italic; font-size: 1.05rem;
+  color: #F5EED8; text-align: center; line-height: 1.7;
+  background: rgba(44,26,14,0.75); padding: 18px 28px; border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+
+/* AUDIO TOGGLE */
+#audio-toggle {
+  position: absolute; top: 56px; left: 20px; pointer-events: auto;
+  background: rgba(44,26,14,0.5); border: none; border-radius: 50%;
+  width: 36px; height: 36px; font-size: 1rem; cursor: pointer; color: #F5EED8;
+}
+
+.trust-name.trust-unknown { opacity: 0.55; letter-spacing: 0.15em; }
+.care-whisper { background: #6B4226 !important; font-style: italic; }

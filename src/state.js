@@ -17,6 +17,8 @@ export const state = {
   currentGalgo: null,
   streaming: false,
   mouseDown: false,
+  moving: false,
+  sun: null,
   mouseX: 0,
   mouseY: 0,
   cameraAngle: Math.PI,

@@ -1,6 +1,7 @@
 // NPC definitions, meshes, patrol
 import * as THREE from 'three';
 import { state } from './state.js';
+import { terrainHeight } from './world.js';
 
 const NPC_DEFS = [
   {
@@ -51,7 +52,7 @@ function makeNPCMesh(color, height) {
 export function buildNPCs() {
   NPC_DEFS.forEach(def => {
     const mesh = makeNPCMesh(def.color, def.height);
-    mesh.position.set(def.x, 0, def.z);
+    mesh.position.set(def.x, terrainHeight(def.x, def.z), def.z);
     state.scene.add(mesh);
     const summary = localStorage.getItem(`npc_${def.id}_summary`) || '';
     const history = JSON.parse(localStorage.getItem(`npc_${def.id}_history`) || '[]');
@@ -66,6 +67,9 @@ export function buildNPCs() {
 export function updateNPCPatrol(npc, dt) {
   if (npc.patrolRadius <= 0) return;
   npc.patrolAngle += npc.patrolSpeed * dt * 0.1;
-  npc.mesh.position.x = npc.baseX + Math.cos(npc.patrolAngle) * npc.patrolRadius;
-  npc.mesh.position.z = npc.baseZ + Math.sin(npc.patrolAngle) * npc.patrolRadius;
+  const x = npc.baseX + Math.cos(npc.patrolAngle) * npc.patrolRadius;
+  const z = npc.baseZ + Math.sin(npc.patrolAngle) * npc.patrolRadius;
+  npc.mesh.position.set(x, terrainHeight(x, z), z);
+  // Face along the direction of travel (tangent to the patrol circle)
+  npc.mesh.rotation.y = Math.atan2(-Math.sin(npc.patrolAngle), Math.cos(npc.patrolAngle));
 }

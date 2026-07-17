@@ -1,4 +1,4 @@
-// HUD: trust panel, zone indicator, milestones, reputation
+// HUD: trust panel, zone indicator, milestones, hints, reputation
 import { state } from './state.js';
 
 export function updateTrustPanel() {
@@ -7,10 +7,18 @@ export function updateTrustPanel() {
   state.galgos.forEach(g => {
     const c = document.createElement('div');
     c.className = 'trust-bar-container';
-    c.innerHTML = `
-      <span class="trust-name">${g.name}</span>
-      <div class="trust-bar-bg"><div class="trust-bar-fill" style="width:${g.trust}%"></div></div>
-    `;
+    if (g.discovered) {
+      c.innerHTML = `
+        <span class="trust-name">${g.name}</span>
+        <div class="trust-bar-bg"><div class="trust-bar-fill" style="width:${g.trust}%"></div></div>
+      `;
+    } else {
+      // Spec §14.2 — undiscovered slots hint that more galgos exist
+      c.innerHTML = `
+        <span class="trust-name trust-unknown">???</span>
+        <div class="trust-bar-bg"></div>
+      `;
+    }
     panel.appendChild(c);
   });
 }
@@ -33,7 +41,19 @@ export function showMilestone(text) {
   const el = document.getElementById('milestone');
   el.textContent = text;
   el.style.display = 'block';
-  setTimeout(() => { el.style.display = 'none'; }, 3500);
+  clearTimeout(el._hideTimer);
+  el._hideTimer = setTimeout(() => { el.style.display = 'none'; }, 4500);
+}
+
+// Spec §14.2 — gentle one-time tutorial hints, persisted so they never repeat.
+export function showHint(id, text) {
+  if (localStorage.getItem(`hint_${id}_shown`) === 'true') return;
+  localStorage.setItem(`hint_${id}_shown`, 'true');
+  const el = document.getElementById('hint');
+  el.textContent = text;
+  el.style.display = 'block';
+  clearTimeout(el._hideTimer);
+  el._hideTimer = setTimeout(() => { el.style.display = 'none'; }, 8000);
 }
 
 export function updateProximityPrompt() {
@@ -43,13 +63,15 @@ export function updateProximityPrompt() {
     for (const npc of state.npcs) {
       if (npc.mesh.position.distanceTo(pp) < 6) {
         promptText = `E: Talk to ${npc.name}`;
+        showHint('first-npc', 'Press E to talk. These conversations shape the story.');
         break;
       }
     }
     if (!promptText) {
       for (const g of state.galgos) {
-        if (g.mesh.position.distanceTo(pp) < 5) {
+        if (g.discovered && g.mesh.position.distanceTo(pp) < 5) {
           promptText = `E: Care for ${g.name}`;
+          showHint('first-galgo', 'Press E to care for this galgo. Earning trust takes patience.');
           break;
         }
       }

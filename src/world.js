@@ -2,6 +2,11 @@
 import * as THREE from 'three';
 import { state, WORLD_SIZE } from './state.js';
 
+// Height function shared by the terrain mesh and everything standing on it.
+export function terrainHeight(x, z) {
+  return Math.sin(x * 0.03) * Math.cos(z * 0.04) * 1.5;
+}
+
 function makeTree(x, z) {
   const g = new THREE.Group();
   const trunk = new THREE.Mesh(
@@ -19,7 +24,7 @@ function makeTree(x, z) {
   crown.position.y = 4;
   crown.castShadow = true;
   g.add(crown);
-  g.position.set(x, 0, z);
+  g.position.set(x, terrainHeight(x, z), z);
   return g;
 }
 
@@ -48,11 +53,13 @@ function makeBuilding(x, z, w, h, d, roofColor) {
     win.position.set(side * (w * 0.3), h * 0.55, d / 2 + 0.06);
     g.add(win);
   }
-  g.position.set(x, 0, z);
+  // Sink slightly below the lowest nearby terrain so no gap shows on slopes.
+  const y = terrainHeight(x, z) - 0.4;
+  g.position.set(x, y, z);
   g.userData.isBuilding = true;
   g.userData.bbox = new THREE.Box3().setFromCenterAndSize(
-    new THREE.Vector3(x, h / 2, z),
-    new THREE.Vector3(w + 1, h, d + 1)
+    new THREE.Vector3(x, y + h / 2, z),
+    new THREE.Vector3(w + 1, h + 2, d + 1)
   );
   return g;
 }
@@ -64,7 +71,7 @@ export function buildTerrain() {
   const colors = [];
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i), z = pos.getZ(i);
-    pos.setY(i, Math.sin(x * 0.03) * Math.cos(z * 0.04) * 1.5);
+    pos.setY(i, terrainHeight(x, z));
     const base = new THREE.Color(0xD4A96A);
     const dark = new THREE.Color(0xB8935A);
     const t = (Math.sin(x * 0.1 + z * 0.07) + 1) * 0.5;
@@ -114,14 +121,15 @@ export function buildWorld() {
     new THREE.CylinderGeometry(2, 2.2, 1.5, 12),
     new THREE.MeshLambertMaterial({ color: 0xA0A0A0 })
   );
-  fountainBase.position.set(-45, 0.75, -20);
+  const fountainY = terrainHeight(-45, -20);
+  fountainBase.position.set(-45, fountainY + 0.75, -20);
   fountainBase.castShadow = true;
   state.scene.add(fountainBase);
   const fountainTop = new THREE.Mesh(
     new THREE.CylinderGeometry(0.3, 0.5, 2, 8),
     new THREE.MeshLambertMaterial({ color: 0xB0B0B0 })
   );
-  fountainTop.position.set(-45, 2.5, -20);
+  fountainTop.position.set(-45, fountainY + 2.5, -20);
   state.scene.add(fountainTop);
 
   // Grass tufts (instanced)
@@ -132,7 +140,7 @@ export function buildWorld() {
   for (let i = 0; i < 600; i++) {
     const x = (Math.random() - 0.5) * 400;
     const z = (Math.random() - 0.5) * 400;
-    dummy.position.set(x, 0.4, z);
+    dummy.position.set(x, terrainHeight(x, z) + 0.4, z);
     dummy.rotation.y = Math.random() * Math.PI;
     dummy.scale.set(1, 0.5 + Math.random(), 1);
     dummy.updateMatrix();
@@ -140,14 +148,14 @@ export function buildWorld() {
   }
   state.scene.add(grassMesh);
 
-  // Roads
+  // Roads — short segments that follow the terrain so they don't clip on slopes
   const roadMat = new THREE.MeshLambertMaterial({ color: 0xB89860 });
-  const road1 = new THREE.Mesh(new THREE.BoxGeometry(80, 0.05, 4), roadMat);
-  road1.position.set(-10, 0.03, -20);
-  road1.receiveShadow = true;
-  state.scene.add(road1);
-  const road2 = new THREE.Mesh(new THREE.BoxGeometry(4, 0.05, 60), roadMat);
-  road2.position.set(0, 0.03, 0);
-  road2.receiveShadow = true;
-  state.scene.add(road2);
+  const addRoadSegment = (x, z, w, d) => {
+    const seg = new THREE.Mesh(new THREE.BoxGeometry(w, 0.08, d), roadMat);
+    seg.position.set(x, terrainHeight(x, z) + 0.06, z);
+    seg.receiveShadow = true;
+    state.scene.add(seg);
+  };
+  for (let x = -50; x <= 30; x += 8) addRoadSegment(x, -20, 8.4, 4);
+  for (let z = -30; z <= 30; z += 8) addRoadSegment(0, z, 4, 8.4);
 }

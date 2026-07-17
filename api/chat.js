@@ -1,4 +1,32 @@
-// Serverless proxy for Anthropic API — keeps the API key server-side
+// Serverless proxy for Anthropic API — keeps the API key server-side.
+// The model, token budget, and payload shape are pinned here so the open
+// endpoint can't be repurposed as a general-purpose LLM proxy.
+
+export const config = { supportsResponseStreaming: true };
+
+const MAX_MESSAGES = 20;
+const MAX_CONTENT_CHARS = 2000;
+const MAX_SYSTEM_CHARS = 6000;
+
+function validate(body) {
+  if (!body || typeof body !== 'object') return 'invalid body';
+  const { system, messages } = body;
+  if (typeof system !== 'string' || system.length > MAX_SYSTEM_CHARS) {
+    return 'invalid system prompt';
+  }
+  if (!Array.isArray(messages) || messages.length === 0 || messages.length > MAX_MESSAGES) {
+    return 'invalid messages';
+  }
+  for (const m of messages) {
+    if (!m || (m.role !== 'user' && m.role !== 'assistant')) return 'invalid message role';
+    if (typeof m.content !== 'string' || m.content.length > MAX_CONTENT_CHARS) {
+      return 'invalid message content';
+    }
+  }
+  if (messages[0].role !== 'user') return 'first message must be from user';
+  return null;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -7,6 +35,11 @@ export default async function handler(req, res) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return res.status(500).json({ error: 'API key not configured' });
+  }
+
+  const validationError = validate(req.body);
+  if (validationError) {
+    return res.status(400).json({ error: validationError });
   }
 
   try {
@@ -20,15 +53,27 @@ export default async function handler(req, res) {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-5',
         max_tokens: 300,
+        // Sonnet 5 defaults to adaptive thinking; disable so the small token
+        // budget is spent on dialogue text the client can stream.
+        thinking: { type: 'disabled' },
         system,
-        messages,
+        messages: messages.map(m => ({ role: m.role, content: m.content })),
         stream: true,
       }),
     });
 
-    // Stream the response through
+    if (!response.ok) {
+      const errBody = await response.text();
+      let message = `Upstream error (${response.status})`;
+      try {
+        message = JSON.parse(errBody)?.error?.message || message;
+      } catch { /* keep generic message */ }
+      return res.status(response.status).json({ error: { message } });
+    }
+
+    // Stream the SSE response through
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -44,6 +89,6 @@ export default async function handler(req, res) {
 
     res.end();
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: { message: err.message } });
   }
 }
