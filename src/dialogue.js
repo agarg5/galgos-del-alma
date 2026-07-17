@@ -264,17 +264,23 @@ export async function requestWhisper(galgo) {
   const el = document.getElementById('whisper');
   el.textContent = '...';
   el.style.display = 'block';
+  // A whisper has no cancel UI — time out a stalled stream so it can't
+  // hold the shared streaming lock forever.
+  streamAbort = new AbortController();
+  const watchdog = setTimeout(() => streamAbort.abort(), 30000);
   try {
     const text = await streamCompletion(
       `You are ${galgo.name}, a galgo who has learned to trust again. Speak in simple, sensory, present-tense observations. No dramatics. Just small true things. Two or three short sentences at most.`,
       [{ role: 'user', content: 'The person you trust kneels beside you quietly.' }],
-      textSoFar => { el.textContent = textSoFar; }
+      textSoFar => { el.textContent = textSoFar; },
+      streamAbort.signal
     );
     if (text) showTimedOverlay(el, text, 9000);
     else el.style.display = 'none';
   } catch {
     el.style.display = 'none';
   }
+  clearTimeout(watchdog);
   state.streaming = false;
   sendBtn.disabled = false;
 }
