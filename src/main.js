@@ -65,6 +65,7 @@ function checkContextualHints(dt) {
 
 function animate() {
   requestAnimationFrame(animate);
+  state.clock.update();
   const dt = Math.min(state.clock.getDelta(), 0.05);
 
   updatePlayer(dt);

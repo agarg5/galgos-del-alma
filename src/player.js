@@ -5,13 +5,21 @@ import { terrainHeight } from './world.js';
 
 export function buildPlayer() {
   const playerMesh = new THREE.Group();
-  const body = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.4, 0.35, 1.6, 8),
-    new THREE.MeshLambertMaterial({ color: 0xD2B48C })
+  // Two-tone volunteer: dark trousers, terracotta shirt, bare head
+  const legs = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.34, 0.3, 0.75, 8),
+    new THREE.MeshLambertMaterial({ color: 0x4A3B2C })
   );
-  body.position.y = 0.8;
-  body.castShadow = true;
-  playerMesh.add(body);
+  legs.position.y = 0.375;
+  legs.castShadow = true;
+  playerMesh.add(legs);
+  const torso = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.4, 0.36, 0.85, 8),
+    new THREE.MeshLambertMaterial({ color: 0xB8703F })
+  );
+  torso.position.y = 1.175;
+  torso.castShadow = true;
+  playerMesh.add(torso);
   const head = new THREE.Mesh(
     new THREE.SphereGeometry(0.35, 8, 6),
     new THREE.MeshLambertMaterial({ color: 0xE8C9A0 })
