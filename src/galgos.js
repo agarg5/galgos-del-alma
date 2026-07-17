@@ -5,6 +5,7 @@ import { terrainHeight } from './world.js';
 import { updateTrustPanel, showMilestone, showHint, getZone } from './hud.js';
 import { playChime } from './audio.js';
 import { requestWhisper } from './dialogue.js';
+import { t, onLangChange } from './i18n.js';
 
 function makeGalgoMesh(color) {
   const g = new THREE.Group();
@@ -144,7 +145,7 @@ export function checkLunaSpawn() {
   if (!luna || luna.discovered || !state.lunaHinted) return;
   if (getZone(state.player.position) === 'dehesa') {
     discoverGalgo('luna');
-    showMilestone('A thin, fawn-colored galgo watches you from the trees. Luna.');
+    showMilestone(t('milestone.luna'));
     playChime();
   }
 }
@@ -235,11 +236,8 @@ function careButtonLabel(base, cooldown) {
   return cooldown > 0 ? `${base} (${Math.ceil(cooldown)}s)` : base;
 }
 
-export function openCareMenu(galgo) {
-  if (state.careMenuActive || state.dialogueActive) return;
-  state.careMenuActive = true;
-  state.currentGalgo = galgo;
-  document.getElementById('care-galgo-name').textContent = `Care for ${galgo.name}`;
+function renderCareMenu(galgo) {
+  document.getElementById('care-galgo-name').textContent = t('care.title', { name: galgo.name });
   const sit = document.getElementById('care-sit');
   const food = document.getElementById('care-food');
   const touch = document.getElementById('care-touch');
@@ -248,17 +246,29 @@ export function openCareMenu(galgo) {
   sit.disabled = galgo.cooldowns.sit > 0;
   food.disabled = foodLocked || galgo.cooldowns.food > 0;
   touch.disabled = touchLocked || galgo.cooldowns.touch > 0;
-  sit.textContent = careButtonLabel('Sit nearby quietly (+3 trust)', galgo.cooldowns.sit);
+  sit.textContent = careButtonLabel(t('care.sit'), galgo.cooldowns.sit);
   food.textContent = foodLocked
-    ? 'Offer food (needs more trust)'
-    : careButtonLabel('Offer food (+8 trust)', galgo.cooldowns.food);
+    ? t('care.foodLocked')
+    : careButtonLabel(t('care.food'), galgo.cooldowns.food);
   touch.textContent = touchLocked
-    ? 'Gentle touch (needs more trust)'
-    : careButtonLabel('Gentle touch (+12 trust)', galgo.cooldowns.touch);
+    ? t('care.touchLocked')
+    : careButtonLabel(t('care.touch'), galgo.cooldowns.touch);
   // Spec §8.3 — bonded galgos can share a quiet inner monologue
   document.getElementById('care-whisper').style.display = galgo.trust > 85 ? 'block' : 'none';
+}
+
+export function openCareMenu(galgo) {
+  if (state.careMenuActive || state.dialogueActive) return;
+  state.careMenuActive = true;
+  state.currentGalgo = galgo;
+  renderCareMenu(galgo);
   document.getElementById('care-menu').style.display = 'block';
 }
+
+// Keep the open care menu's labels current if the language changes mid-game.
+onLangChange(() => {
+  if (state.careMenuActive && state.currentGalgo) renderCareMenu(state.currentGalgo);
+});
 
 export function closeCareMenu() {
   state.careMenuActive = false;
@@ -278,16 +288,16 @@ export function doCareAction(action) {
   updateTrustPanel();
   checkMilestones(galgo, prevTrust);
   closeCareMenu();
-  showHint('after-care', 'Trust builds slowly. Try different actions — sit nearby, offer food, or a gentle touch when the time is right.');
+  showHint('after-care', t('hint.afterCare'));
 }
 
 function checkMilestones(galgo, prevTrust) {
   if (galgo.trust >= 50 && prevTrust < 50) {
-    showMilestone(`${galgo.name} is starting to trust you.`);
+    showMilestone(t('milestone.trustStarting', { name: galgo.name }));
     playChime();
   }
   if (galgo.trust >= 100 && prevTrust < 100) {
-    showMilestone(`${galgo.name} is ready for a forever home.`);
+    showMilestone(t('milestone.trustReady', { name: galgo.name }));
     playChime();
   }
 }

@@ -4,6 +4,7 @@ import { discoverGalgo } from './galgos.js';
 import { showMilestone, showTimedOverlay } from './hud.js';
 import { CHAT_MODEL, CHAT_MAX_TOKENS, CHAT_THINKING, MAX_MESSAGES } from '../chat-config.js';
 import { initVoice, speakAs, stopSpeaking, stopListening } from './voice.js';
+import { t } from './i18n.js';
 
 export function openDialogue(npc) {
   if (state.dialogueActive) return;
@@ -138,7 +139,7 @@ const DISCOVERIES = [
     unlock() {
       state.lunaHinted = true;
       localStorage.setItem('luna_hinted', 'true');
-      showMilestone('Dr. Amparo mentioned a galgo out in the dehesa. Maybe you should look for her.');
+      showMilestone(t('milestone.lunaHint'));
     },
   },
   {
@@ -151,7 +152,7 @@ const DISCOVERIES = [
     promptAddition: '\n\nIMPORTANT for this conversation: at some point, let slip that after the season ended you left a brindle galgo near the edge of the village — you could not keep him and did not want to deal with it. You are a little defensive about it.',
     unlock() {
       discoverGalgo('rayo');
-      showMilestone('A brindle galgo has been left near the village outskirts. Rayo.');
+      showMilestone(t('milestone.rayo'));
     },
   },
 ];
@@ -196,7 +197,8 @@ export async function sendMessage() {
     (npc.summary ? `\n\nRelationship summary from previous sessions: ${npc.summary}` : '') +
     `\n\nCurrent world state: Session ${state.sessions}. Galgos the player has met: ${galgoState}. Village reputation: ${state.reputation}/100.` +
     discoveryPromptAddition(npc) +
-    '\n\nStay in character. Keep replies to a few conversational sentences.';
+    '\n\nStay in character. Keep replies to a few conversational sentences.' +
+    '\n\n' + t('dialogue.langInstruction');
 
   const historyEl = document.getElementById('dialogue-history');
   const msgDiv = document.createElement('div');
@@ -256,7 +258,7 @@ export async function sendMessage() {
       const errDiv = msgDiv.textContent && msgDiv.isConnected
         ? document.createElement('div') : msgDiv;
       errDiv.className = 'msg npc';
-      errDiv.textContent = `[${npc.name} pauses — the words don't come. (${err.message})]`;
+      errDiv.textContent = t('dialogue.error', { name: npc.name, detail: err.message });
       if (!errDiv.isConnected) historyEl.appendChild(errDiv);
       historyEl.scrollTop = historyEl.scrollHeight;
     }
@@ -283,8 +285,8 @@ export async function requestWhisper(galgo) {
   const watchdog = setTimeout(() => streamAbort.abort(), 30000);
   try {
     const text = await streamCompletion(
-      `You are ${galgo.name}, a galgo who has learned to trust again. Speak in simple, sensory, present-tense observations. No dramatics. Just small true things. Two or three short sentences at most.`,
-      [{ role: 'user', content: 'The person you trust kneels beside you quietly.' }],
+      t('whisper.prompt', { name: galgo.name }),
+      [{ role: 'user', content: t('whisper.opening') }],
       textSoFar => { el.textContent = textSoFar; },
       streamAbort.signal
     );

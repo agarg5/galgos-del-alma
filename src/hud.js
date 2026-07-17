@@ -1,5 +1,6 @@
 // HUD: trust panel, zone indicator, milestones, hints, reputation
 import { state } from './state.js';
+import { t, onLangChange } from './i18n.js';
 
 export const NPC_INTERACT_RADIUS = 6;
 export const GALGO_INTERACT_RADIUS = 5;
@@ -43,16 +44,16 @@ export function updateTrustPanel() {
 }
 
 export function updateReputation() {
-  document.getElementById('reputation').textContent = `Village standing: ${state.reputation} / 100`;
+  document.getElementById('reputation').textContent =
+    t('hud.reputation', { n: state.reputation });
 }
 
-// Zone ids are the stable programmatic handles; labels are display-only.
-const ZONE_LABELS = {
-  dehesa: 'La Dehesa',
-  pueblo: 'El Pueblo',
-  refugio: 'El Refugio',
-  road: 'The Road',
-};
+// Keep language-dependent HUD text in sync when the player switches languages
+// mid-game. The zone indicator and interact prompt refresh every frame in
+// updateProximityPrompt(), so only reputation needs an explicit nudge here.
+onLangChange(() => {
+  if (state.player) updateReputation();
+});
 
 export function getZone(pos) {
   if (pos.x > 30 && pos.z < -20) return 'dehesa';
@@ -116,16 +117,16 @@ export function updateProximityPrompt() {
   if (!state.dialogueActive && !state.careMenuActive) {
     const target = findNearbyInteractable(pp);
     if (target?.type === 'npc') {
-      promptText = `E: Talk to ${target.npc.name}`;
-      showHint('first-npc', 'Press E to talk. These conversations shape the story.');
+      promptText = t('prompt.talk', { name: target.npc.name });
+      showHint('first-npc', t('hint.firstNpc'));
     } else if (target?.type === 'galgo') {
-      promptText = `E: Care for ${target.galgo.name}`;
-      showHint('first-galgo', 'Press E to care for this galgo. Earning trust takes patience.');
+      promptText = t('prompt.care', { name: target.galgo.name });
+      showHint('first-galgo', t('hint.firstGalgo'));
     }
   }
   const promptEl = document.getElementById('interact-prompt');
   promptEl.textContent = promptText;
   promptEl.classList.toggle('visible', !!promptText);
 
-  document.getElementById('zone-indicator').textContent = ZONE_LABELS[getZone(pp)];
+  document.getElementById('zone-indicator').textContent = t(`zone.${getZone(pp)}`);
 }

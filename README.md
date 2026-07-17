@@ -35,6 +35,7 @@ variable set in the Vercel project. Pushing `main` triggers a deploy.
 | File | Responsibility |
 |---|---|
 | `src/state.js` | shared mutable game state |
+| `src/i18n.js` | English/Spanish strings, language toggle, `t()` helper |
 | `src/scene.js` | renderer, camera, lights, player-following shadow frustum |
 | `src/world.js` | terrain heightmap + procedural buildings/trees/roads |
 | `src/player.js` | movement, collision, third-person camera |

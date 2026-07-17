@@ -1,6 +1,7 @@
 // Ambient audio via Web Audio API — no external files (spec §11).
 // Everything starts muted; the speaker icon in the HUD toggles it.
 import { state } from './state.js';
+import { t, onLangChange } from './i18n.js';
 
 let ctx = null;
 let masterGain = null;
@@ -162,6 +163,7 @@ export function updateFootsteps(dt) {
 
 export function initAudioToggle() {
   const btn = document.getElementById('audio-toggle');
+  let toggled = false;
   btn.addEventListener('click', () => {
     enabled = !enabled;
     if (enabled) {
@@ -174,6 +176,13 @@ export function initAudioToggle() {
       stopMusic();
     }
     btn.textContent = enabled ? '\u{1F50A}' : '\u{1F507}';
-    btn.title = enabled ? 'Mute sound & music' : 'Enable sound & music';
+    // Now that sound has been touched, the title describes the toggle action.
+    // Drop the static-translation hook so it stops reverting to the default.
+    btn.removeAttribute('data-i18n-title');
+    toggled = true;
+    btn.title = enabled ? t('audio.muteTitle') : t('audio.enableTitle');
+  });
+  onLangChange(() => {
+    if (toggled) btn.title = enabled ? t('audio.muteTitle') : t('audio.enableTitle');
   });
 }

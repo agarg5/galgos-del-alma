@@ -10,14 +10,24 @@ import { setupInput } from './input.js';
 import { updateTrustPanel, updateReputation, updateProximityPrompt, showHint } from './hud.js';
 import { initAudioToggle, updateFootsteps } from './audio.js';
 import { hasSave, restoreGame, startAutosave, resetProgress } from './save.js';
+import { t, initLanguageToggle, onLangChange } from './i18n.js';
 
-// Start screen — returning players continue where they left off
+// Language selection lives on the start screen; apply it before anything shows.
+initLanguageToggle();
+
+// Start screen — returning players continue where they left off. The button
+// label is language-dependent, so refresh it whenever the language changes.
+function refreshStartScreen() {
+  document.getElementById('start-btn').textContent =
+    hasSave() ? t('start.continue') : t('start.begin');
+}
+refreshStartScreen();
+onLangChange(refreshStartScreen);
 if (hasSave()) {
-  document.getElementById('start-btn').textContent = 'Continue';
   document.getElementById('reset-btn').style.display = 'inline-block';
 }
 document.getElementById('reset-btn').addEventListener('click', () => {
-  if (confirm('Start over? All trust, conversations, and progress will be lost.')) {
+  if (confirm(t('reset.confirm'))) {
     resetProgress();
   }
 });
@@ -32,7 +42,7 @@ document.getElementById('start-btn').addEventListener('click', () => {
   localStorage.setItem('game_sessions', state.sessions);
   init();
   animate();
-  showHint('start', 'Use WASD to walk. Hold and drag the mouse to look around.');
+  showHint('start', t('hint.start'));
 });
 
 function init() {
@@ -65,13 +75,13 @@ function checkContextualHints(dt) {
   if (!idleNpcHintDone && secondsPlayed > 120) {
     idleNpcHintDone = true;
     if (!talkedToNPC) {
-      showHint('idle-npc', 'The people of this village each know something. Try talking to someone.');
+      showHint('idle-npc', t('hint.idleNpc'));
     }
   }
   if (!exploreHintDone && secondsPlayed > 300) {
     exploreHintDone = true;
     if (state.galgos.some(g => !g.discovered)) {
-      showHint('idle-explore', 'Ask around — someone may know where other galgos have been seen.');
+      showHint('idle-explore', t('hint.idleExplore'));
     }
   }
 }
