@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,16 +13,20 @@
 <!-- START SCREEN -->
 <div id="start-screen">
   <h1>Galgos del Alma</h1>
-  <p class="subtitle">A story of patience, compassion, and trust</p>
-  <p class="description">
-    Every year after hunting season ends in Spain, thousands of galgos — Spanish greyhounds — are abandoned by their owners. Left in fields, tied to trees, or worse. In this world, you are a volunteer. Walk the golden dehesa, earn the trust of three frightened galgos, and speak with the people of the village. There are no enemies here — only fear, and the slow medicine of kindness.
+  <p class="subtitle" data-i18n="start.subtitle">Una historia de paciencia, compasión y confianza</p>
+  <div id="lang-toggle" role="group" aria-label="Language / Idioma">
+    <button type="button" class="lang-btn" data-lang="es">Español</button>
+    <button type="button" class="lang-btn" data-lang="en">English</button>
+  </div>
+  <p class="description" data-i18n="start.description">
+    Cada año, cuando termina la temporada de caza en España, miles de galgos son abandonados por sus dueños. Los dejan en el campo, atados a los árboles, o cosas peores. En este mundo, tú eres voluntario. Recorre la dehesa dorada, gánate la confianza de tres galgos asustados y habla con la gente del pueblo. Aquí no hay enemigos, solo el miedo y la lenta medicina de la bondad.
   </p>
-  <button id="start-btn">Begin</button>
-  <button id="reset-btn" style="display:none;">Start over</button>
+  <button id="start-btn">Comenzar</button>
+  <button id="reset-btn" data-i18n="start.reset" style="display:none;">Empezar de nuevo</button>
   <details style="margin-top: 1rem; max-width: 340px; text-align: center;">
-    <summary style="font-family: 'Source Serif 4', serif; font-size: 0.85rem; color: #8B7355; cursor: pointer;">Use your own API key (optional)</summary>
-    <input type="password" id="api-key-input" placeholder="Enter your Anthropic API key" style="margin-top: 0.75rem;" />
-    <p class="note">Your key is stored only in this browser tab.</p>
+    <summary data-i18n="apikey.summary" style="font-family: 'Source Serif 4', serif; font-size: 0.85rem; color: #8B7355; cursor: pointer;">Usa tu propia clave API (opcional)</summary>
+    <input type="password" id="api-key-input" data-i18n-placeholder="apikey.placeholder" placeholder="Introduce tu clave API de Anthropic" style="margin-top: 0.75rem;" />
+    <p class="note" data-i18n="apikey.note">Tu clave se guarda solo en esta pestaña del navegador.</p>
   </details>
 </div>
 
@@ -30,19 +34,19 @@
 <div id="hud" style="display:none;">
   <div id="zone-indicator">La Dehesa</div>
   <div id="trust-panel"></div>
-  <div id="interact-prompt">Press E to interact</div>
-  <div id="reputation">Village standing: 0 / 100</div>
-  <button id="audio-toggle" title="Enable ambient sound">&#128263;</button>
+  <div id="interact-prompt" data-i18n="prompt.default">Pulsa E para interactuar</div>
+  <div id="reputation">Reputación en el pueblo: 0 / 100</div>
+  <button id="audio-toggle" data-i18n-title="hud.audioTitle" title="Activar sonido ambiente">&#128263;</button>
 </div>
 
 <!-- CARE MENU -->
 <div id="care-menu">
   <h3 id="care-galgo-name"></h3>
-  <button class="care-btn" id="care-sit">Sit nearby quietly (+3 trust)</button>
-  <button class="care-btn" id="care-food">Offer food (+8 trust)</button>
-  <button class="care-btn" id="care-touch">Gentle touch (+12 trust)</button>
-  <button class="care-btn care-whisper" id="care-whisper" style="display:none;">Listen</button>
-  <button class="care-close" id="care-close-btn">Walk away</button>
+  <button class="care-btn" id="care-sit">Siéntate cerca en silencio (+3 de confianza)</button>
+  <button class="care-btn" id="care-food">Ofrece comida (+8 de confianza)</button>
+  <button class="care-btn" id="care-touch">Caricia suave (+12 de confianza)</button>
+  <button class="care-btn care-whisper" id="care-whisper" data-i18n="care.whisper" style="display:none;">Escucha</button>
+  <button class="care-close" id="care-close-btn" data-i18n="care.close">Aléjate</button>
 </div>
 
 <!-- DIALOGUE -->
@@ -51,16 +55,16 @@
     <div id="dialogue-header">
       <span id="dialogue-npc-name"></span>
       <span id="dialogue-header-actions">
-        <button id="voice-stop" style="display:none;">&#9724; Stop talking</button>
-        <button id="voice-toggle">&#128483;&#65039; On</button>
-        <button id="dialogue-close">End conversation</button>
+        <button id="voice-stop" data-i18n="voice.stop" style="display:none;">&#9724; Dejar de hablar</button>
+        <button id="voice-toggle">&#128483;&#65039; Sí</button>
+        <button id="dialogue-close" data-i18n="dialogue.close">Terminar conversación</button>
       </span>
     </div>
     <div id="dialogue-history"></div>
     <div id="dialogue-input-row">
-      <button id="mic-btn" title="Speak your reply">&#127908;</button>
-      <input type="text" id="dialogue-input" placeholder="Speak or type..." maxlength="1000" />
-      <button id="dialogue-send">Send</button>
+      <button id="mic-btn" data-i18n-title="dialogue.micTitle" title="Habla tu respuesta">&#127908;</button>
+      <input type="text" id="dialogue-input" data-i18n-placeholder="dialogue.placeholder" placeholder="Habla o escribe..." maxlength="1000" />
+      <button id="dialogue-send" data-i18n="dialogue.send">Enviar</button>
     </div>
   </div>
 </div>

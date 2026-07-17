@@ -43,6 +43,21 @@ canvas { display: block; }
   margin-top: 1rem; font-size: 0.8rem; color: #8B7355; font-style: italic;
 }
 
+/* LANGUAGE TOGGLE (start screen) */
+#lang-toggle {
+  display: flex; gap: 8px; margin-bottom: 2rem;
+}
+#lang-toggle .lang-btn {
+  padding: 7px 20px; background: rgba(255,255,255,0.35); color: #6B4226;
+  border: 1px solid #C4A35A; border-radius: 20px;
+  font-family: 'Source Serif 4', serif; font-size: 0.9rem; cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+#lang-toggle .lang-btn:hover { background: rgba(255,255,255,0.6); }
+#lang-toggle .lang-btn.active {
+  background: #B85C38; color: #F5EED8; border-color: #B85C38;
+}
+
 /* HUD */
 #hud { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
 #zone-indicator {

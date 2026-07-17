@@ -1,9 +1,14 @@
 // Voice: NPCs speak their replies (speechSynthesis) and the player can talk
 // back (SpeechRecognition). Both are built into the browser — no API keys.
 // Replies always stream as text too; speech is a layer on top.
+import { getLang, t, onLangChange } from './i18n.js';
 
 const synth = window.speechSynthesis || null;
 const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+
+// BCP-47 tags the browser speech engines expect, keyed by game language.
+const SPEECH_LANG = { es: 'es-ES', en: 'en-US' };
+const speechLang = () => SPEECH_LANG[getLang()] || 'en-US';
 
 // Distinct delivery per character — same engine, different pitch/rate
 const VOICE_PROFILES = {
@@ -20,17 +25,18 @@ let cachedVoice;
 function pickVoice() {
   if (cachedVoice !== undefined) return cachedVoice;
   const voices = synth.getVoices();
+  const prefix = speechLang().slice(0, 2); // 'es' or 'en'
   cachedVoice =
-    voices.find(v => v.lang === 'en-US' && /google/i.test(v.name)) ||
-    voices.find(v => v.lang.startsWith('en')) ||
+    voices.find(v => v.lang === speechLang() && /google/i.test(v.name)) ||
+    voices.find(v => v.lang.startsWith(prefix)) ||
     voices[0] || null;
   return cachedVoice;
 }
 
 function updateButtons() {
   const toggle = document.getElementById('voice-toggle');
-  toggle.textContent = voiceEnabled ? '\u{1F5E3}️ On' : '\u{1F5E3}️ Off';
-  toggle.title = voiceEnabled ? 'NPC voices on — click to mute' : 'NPC voices off — click to enable';
+  toggle.textContent = voiceEnabled ? t('voice.on') : t('voice.off');
+  toggle.title = voiceEnabled ? t('voice.titleOn') : t('voice.titleOff');
 }
 
 export function speakAs(profileId, text) {
@@ -40,6 +46,7 @@ export function speakAs(profileId, text) {
   const profile = VOICE_PROFILES[profileId] || {};
   const voice = pickVoice();
   if (voice) u.voice = voice;
+  u.lang = speechLang();
   u.pitch = profile.pitch ?? 1;
   u.rate = profile.rate ?? 1;
   u.volume = profile.volume ?? 1;
@@ -68,7 +75,7 @@ let listening = false;
 
 function initRecognition(onFinal) {
   recognizer = new Recognition();
-  recognizer.lang = 'en-US';
+  recognizer.lang = speechLang();
   recognizer.interimResults = true;
   recognizer.continuous = false;
 
@@ -99,6 +106,14 @@ export function initVoice(sendMessage) {
   const toggle = document.getElementById('voice-toggle');
   const stopBtn = document.getElementById('voice-stop');
   const micBtn = document.getElementById('mic-btn');
+
+  // Switching language mid-game must re-pick the TTS voice, retarget speech
+  // recognition, and relabel the toggle button.
+  onLangChange(() => {
+    cachedVoice = undefined;
+    if (recognizer) recognizer.lang = speechLang();
+    if (synth) updateButtons();
+  });
 
   if (!synth) {
     toggle.style.display = 'none';
