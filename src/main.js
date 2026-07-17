@@ -9,8 +9,19 @@ import { initDialogueListeners } from './dialogue.js';
 import { setupInput } from './input.js';
 import { updateTrustPanel, updateReputation, updateProximityPrompt, showHint } from './hud.js';
 import { initAudioToggle, updateFootsteps } from './audio.js';
+import { hasSave, restoreGame, startAutosave, resetProgress } from './save.js';
 
-// Start screen
+// Start screen — returning players continue where they left off
+if (hasSave()) {
+  document.getElementById('start-btn').textContent = 'Continue';
+  document.getElementById('reset-btn').style.display = 'inline-block';
+}
+document.getElementById('reset-btn').addEventListener('click', () => {
+  if (confirm('Start over? All trust, conversations, and progress will be lost.')) {
+    resetProgress();
+  }
+});
+
 document.getElementById('start-btn').addEventListener('click', () => {
   const keyInput = document.getElementById('api-key-input');
   const key = keyInput ? keyInput.value.trim() : '';
@@ -31,6 +42,8 @@ function init() {
   buildPlayer();
   buildGalgos();
   buildNPCs();
+  restoreGame();
+  startAutosave();
   setupInput();
   initCareListeners();
   initDialogueListeners();

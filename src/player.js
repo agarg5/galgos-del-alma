@@ -13,15 +13,20 @@ export function buildPlayer() {
   legs.position.y = 0.375;
   legs.castShadow = true;
   playerMesh.add(legs);
-  const torso = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.4, 0.36, 0.85, 8),
-    new THREE.MeshLambertMaterial({ color: 0xB8703F })
-  );
-  torso.position.y = 1.175;
+  const shirtMat = new THREE.MeshLambertMaterial({ color: 0xB8703F });
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.36, 0.6, 4, 12), shirtMat);
+  torso.position.y = 1.15;
   torso.castShadow = true;
   playerMesh.add(torso);
+  for (let side = -1; side <= 1; side += 2) {
+    const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.55, 3, 8), shirtMat);
+    arm.position.set(0, 1.15, side * 0.47);
+    arm.rotation.x = side * 0.12;
+    arm.castShadow = true;
+    playerMesh.add(arm);
+  }
   const head = new THREE.Mesh(
-    new THREE.SphereGeometry(0.35, 8, 6),
+    new THREE.SphereGeometry(0.35, 14, 10),
     new THREE.MeshLambertMaterial({ color: 0xE8C9A0 })
   );
   head.position.y = 1.95;
