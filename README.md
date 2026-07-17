@@ -42,7 +42,9 @@ variable set in the Vercel project. Pushing `main` triggers a deploy.
 | `src/npcs.js` | NPC definitions, patrol |
 | `src/dialogue.js` | dialogue UI, Anthropic SSE streaming, discovery unlocks |
 | `src/hud.js` | trust panel, zone indicator, milestones, tutorial hints |
-| `src/audio.js` | Web Audio ambience (muted by default) |
+| `src/audio.js` | Web Audio ambience + procedural guitar music (muted by default) |
+| `src/voice.js` | NPC text-to-speech + microphone input (Web Speech API, no keys) |
+| `src/save.js` | session save/continue (position, camera, cooldowns) |
 | `src/input.js` | keyboard/mouse handling |
 | `api/chat.js` | Vercel serverless proxy for the Anthropic API |
 

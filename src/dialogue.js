@@ -3,6 +3,7 @@ import { state } from './state.js';
 import { discoverGalgo } from './galgos.js';
 import { showMilestone, showTimedOverlay } from './hud.js';
 import { CHAT_MODEL, CHAT_MAX_TOKENS, CHAT_THINKING, MAX_MESSAGES } from '../chat-config.js';
+import { initVoice, speakAs, stopSpeaking } from './voice.js';
 
 export function openDialogue(npc) {
   if (state.dialogueActive) return;
@@ -20,6 +21,7 @@ export function closeDialogue() {
   state.dialogueActive = false;
   document.getElementById('dialogue-overlay').style.display = 'none';
   state.currentNPC = null;
+  stopSpeaking();
   // Abort any in-flight reply so a stalled connection can't leave the
   // streaming lock (and the send button) stuck for the next conversation.
   streamAbort?.abort();
@@ -174,6 +176,8 @@ export async function sendMessage() {
   if (!text) return;
   input.value = '';
 
+  stopSpeaking(); // a new exchange cuts off the previous spoken reply
+
   const npc = state.currentNPC;
   const userMsg = { role: 'user', content: text };
   npc.history.push(userMsg);
@@ -223,6 +227,7 @@ export async function sendMessage() {
     localStorage.setItem(`npc_${npc.id}_summary`, summaryText);
 
     handleDiscoveryUnlocks(npc);
+    speakAs(npc.id, npcText);
 
     // If the player closed and reopened this dialogue mid-stream, the live
     // panel was rebuilt without our streaming div — re-render from history.
@@ -275,8 +280,12 @@ export async function requestWhisper(galgo) {
       textSoFar => { el.textContent = textSoFar; },
       streamAbort.signal
     );
-    if (text) showTimedOverlay(el, text, 9000);
-    else el.style.display = 'none';
+    if (text) {
+      showTimedOverlay(el, text, 9000);
+      speakAs('whisper', text);
+    } else {
+      el.style.display = 'none';
+    }
   } catch {
     el.style.display = 'none';
   }
@@ -288,4 +297,5 @@ export async function requestWhisper(galgo) {
 export function initDialogueListeners() {
   document.getElementById('dialogue-close').addEventListener('click', closeDialogue);
   document.getElementById('dialogue-send').addEventListener('click', sendMessage);
+  initVoice(sendMessage);
 }

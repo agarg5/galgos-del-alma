@@ -50,11 +50,16 @@
   <div id="dialogue-panel">
     <div id="dialogue-header">
       <span id="dialogue-npc-name"></span>
-      <button id="dialogue-close">End conversation</button>
+      <span id="dialogue-header-actions">
+        <button id="voice-stop" style="display:none;">&#9724; Stop talking</button>
+        <button id="voice-toggle">&#128483;&#65039; On</button>
+        <button id="dialogue-close">End conversation</button>
+      </span>
     </div>
     <div id="dialogue-history"></div>
     <div id="dialogue-input-row">
-      <input type="text" id="dialogue-input" placeholder="Speak..." maxlength="1000" />
+      <button id="mic-btn" title="Speak your reply">&#127908;</button>
+      <input type="text" id="dialogue-input" placeholder="Speak or type..." maxlength="1000" />
       <button id="dialogue-send">Send</button>
     </div>
   </div>
