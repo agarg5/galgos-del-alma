@@ -1,12 +1,12 @@
 // Serverless proxy for Anthropic API — keeps the API key server-side.
-// The model, token budget, and payload shape are pinned here so the open
-// endpoint can't be repurposed as a general-purpose LLM proxy.
+// The model, token budget, and payload shape are pinned (see chat-config.js)
+// so the open endpoint can't be repurposed as a general-purpose LLM proxy.
+import {
+  CHAT_MODEL, CHAT_MAX_TOKENS, CHAT_THINKING,
+  MAX_MESSAGES, MAX_CONTENT_CHARS, MAX_SYSTEM_CHARS,
+} from '../chat-config.js';
 
 export const config = { supportsResponseStreaming: true };
-
-const MAX_MESSAGES = 20;
-const MAX_CONTENT_CHARS = 2000;
-const MAX_SYSTEM_CHARS = 6000;
 
 function validate(body) {
   if (!body || typeof body !== 'object') return 'invalid body';
@@ -53,11 +53,9 @@ export default async function handler(req, res) {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-5',
-        max_tokens: 300,
-        // Sonnet 5 defaults to adaptive thinking; disable so the small token
-        // budget is spent on dialogue text the client can stream.
-        thinking: { type: 'disabled' },
+        model: CHAT_MODEL,
+        max_tokens: CHAT_MAX_TOKENS,
+        thinking: CHAT_THINKING,
         system,
         messages: messages.map(m => ({ role: m.role, content: m.content })),
         stream: true,
@@ -89,6 +87,12 @@ export default async function handler(req, res) {
 
     res.end();
   } catch (err) {
-    res.status(500).json({ error: { message: err.message } });
+    // If the upstream died mid-stream our headers are already sent —
+    // res.json() would throw ERR_HTTP_HEADERS_SENT; just terminate.
+    if (!res.headersSent) {
+      res.status(500).json({ error: { message: err.message } });
+    } else {
+      res.end();
+    }
   }
 }

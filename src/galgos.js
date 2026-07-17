@@ -1,8 +1,8 @@
 // Galgo meshes, trust system, behavior, care actions, discovery
 import * as THREE from 'three';
-import { state } from './state.js';
+import { state, WORLD_BOUND } from './state.js';
 import { terrainHeight } from './world.js';
-import { updateTrustPanel, showMilestone, showHint, getZoneName } from './hud.js';
+import { updateTrustPanel, showMilestone, showHint, getZone } from './hud.js';
 import { playChime } from './audio.js';
 import { requestWhisper } from './dialogue.js';
 
@@ -50,19 +50,31 @@ const GALGO_DEFS = [
   { id: 'sombra', name: 'Sombra', color: 0x2C2C2C, x: 10, z: 20, startTrust: 55, startsDiscovered: true },
 ];
 
+let luna = null; // cached for the per-frame spawn check
+
 export function buildGalgos() {
   GALGO_DEFS.forEach(def => {
     const mesh = makeGalgoMesh(def.color);
     mesh.position.set(def.x, terrainHeight(def.x, def.z), def.z);
-    const trust = parseInt(localStorage.getItem(`galgo_${def.id}_trust`) || String(def.startTrust));
+    const storedTrust = localStorage.getItem(`galgo_${def.id}_trust`);
+    const trust = parseInt(storedTrust ?? String(def.startTrust));
+    // Migration: saves from before the discovery system have trust recorded
+    // for galgos the player clearly already met — don't hide those again.
     const discovered = def.startsDiscovered ||
-      localStorage.getItem(`galgo_${def.id}_discovered`) === 'true';
+      localStorage.getItem(`galgo_${def.id}_discovered`) === 'true' ||
+      storedTrust !== null;
     if (discovered) state.scene.add(mesh);
-    state.galgos.push({
+    const galgo = {
       id: def.id, name: def.name, mesh, trust, discovered,
       cooldowns: { sit: 0, food: 0, touch: 0 },
       baseX: def.x, baseZ: def.z,
-    });
+      // cached per-mesh part lookups (avoid getObjectByName per frame)
+      tail: mesh.getObjectByName('tail'),
+      earL: mesh.getObjectByName('earL'),
+      earR: mesh.getObjectByName('earR'),
+    };
+    state.galgos.push(galgo);
+    if (def.id === 'luna') luna = galgo;
   });
 }
 
@@ -72,17 +84,14 @@ export function discoverGalgo(id) {
   if (!galgo || galgo.discovered) return;
   galgo.discovered = true;
   localStorage.setItem(`galgo_${id}_discovered`, 'true');
-  localStorage.setItem(`galgo_${id}_rescued`, 'true');
   state.scene.add(galgo.mesh);
   updateTrustPanel();
 }
 
 // Luna is hinted at by the vet but only appears once the player walks the dehesa.
 export function checkLunaSpawn() {
-  if (localStorage.getItem('luna_hinted') !== 'true') return;
-  const luna = state.galgos.find(g => g.id === 'luna');
-  if (luna.discovered) return;
-  if (getZoneName(state.player.position) === 'La Dehesa') {
+  if (!luna || luna.discovered || !state.lunaHinted) return;
+  if (getZone(state.player.position) === 'dehesa') {
     discoverGalgo('luna');
     showMilestone('A thin, fawn-colored galgo watches you from the trees. Luna.');
     playChime();
@@ -90,62 +99,65 @@ export function checkLunaSpawn() {
 }
 
 const MAX_LEASH = 45; // how far a fleeing galgo will drift from its home spot
+const _dir = new THREE.Vector3(); // scratch — avoid per-frame allocations
+
+// Move `galgo` along _dir. Leashed galgos refuse to leave their home area;
+// all galgos stay inside the world bounds.
+function moveGalgo(galgo, speed, dt, leashed) {
+  const p = galgo.mesh.position;
+  const nx = p.x + _dir.x * speed * dt;
+  const nz = p.z + _dir.z * speed * dt;
+  if (Math.abs(nx) > WORLD_BOUND || Math.abs(nz) > WORLD_BOUND) return;
+  if (leashed) {
+    const dxHome = nx - galgo.baseX, dzHome = nz - galgo.baseZ;
+    if (dxHome * dxHome + dzHome * dzHome > MAX_LEASH * MAX_LEASH) return;
+  }
+  p.x = nx;
+  p.z = nz;
+}
 
 export function updateGalgoBehavior(galgo, dt, playerPos) {
   if (!galgo.discovered) return;
   const dist = galgo.mesh.position.distanceTo(playerPos);
-  const tail = galgo.mesh.getObjectByName('tail');
-  const earL = galgo.mesh.getObjectByName('earL');
-  const earR = galgo.mesh.getObjectByName('earR');
+  const { tail, earL, earR } = galgo;
   const t = galgo.trust;
 
-  const moveBy = (dir, speed) => {
-    const p = galgo.mesh.position;
-    const nx = p.x + dir.x * speed * dt;
-    const nz = p.z + dir.z * speed * dt;
-    // Leash to home spot and world bounds so a galgo can't be chased off the map
-    const dxHome = nx - galgo.baseX, dzHome = nz - galgo.baseZ;
-    if (dxHome * dxHome + dzHome * dzHome > MAX_LEASH * MAX_LEASH) return;
-    if (Math.abs(nx) > 220 || Math.abs(nz) > 220) return;
-    p.x = nx;
-    p.z = nz;
-  };
-
   if (t <= 25) {
-    if (tail) tail.rotation.z = -0.8;
-    if (earL) earL.rotation.x = -0.5;
-    if (earR) earR.rotation.x = -0.5;
+    tail.rotation.z = -0.8;
+    earL.rotation.x = -0.5;
+    earR.rotation.x = -0.5;
     galgo.mesh.scale.y = 0.85;
     if (dist < 6) {
-      moveBy(galgo.mesh.position.clone().sub(playerPos).normalize(), 3);
+      _dir.subVectors(galgo.mesh.position, playerPos).normalize();
+      moveGalgo(galgo, 3, dt, true);
     }
   } else if (t <= 60) {
-    if (tail) tail.rotation.z = -0.2;
-    if (earL) earL.rotation.x = -0.2;
-    if (earR) earR.rotation.x = -0.2;
+    tail.rotation.z = -0.2;
+    earL.rotation.x = -0.2;
+    earR.rotation.x = -0.2;
     galgo.mesh.scale.y = 0.95;
     if (dist < 3) {
-      moveBy(galgo.mesh.position.clone().sub(playerPos).normalize(), 2);
+      _dir.subVectors(galgo.mesh.position, playerPos).normalize();
+      moveGalgo(galgo, 2, dt, true);
     }
   } else if (t <= 85) {
-    if (tail) tail.rotation.z = 0.3;
-    if (earL) earL.rotation.x = 0.1;
-    if (earR) earR.rotation.x = 0.1;
+    tail.rotation.z = 0.3;
+    earL.rotation.x = 0.1;
+    earR.rotation.x = 0.1;
     galgo.mesh.scale.y = 1;
     if (dist < 8 && dist > 3) {
-      moveBy(playerPos.clone().sub(galgo.mesh.position).normalize(), 1.5);
+      _dir.subVectors(playerPos, galgo.mesh.position).normalize();
+      moveGalgo(galgo, 1.5, dt, true);
     }
   } else {
-    if (tail) tail.rotation.z = Math.sin(Date.now() * 0.015) * 0.5;
-    if (earL) earL.rotation.x = 0.2;
-    if (earR) earR.rotation.x = 0.2;
+    tail.rotation.z = Math.sin(Date.now() * 0.015) * 0.5;
+    earL.rotation.x = 0.2;
+    earR.rotation.x = 0.2;
     galgo.mesh.scale.y = 1;
     if (dist > 2.5) {
-      // Bonded galgos follow the player anywhere — ignore the home leash
-      const p = galgo.mesh.position;
-      const toward = playerPos.clone().sub(p).normalize();
-      p.x = Math.max(-220, Math.min(220, p.x + toward.x * 5 * dt));
-      p.z = Math.max(-220, Math.min(220, p.z + toward.z * 5 * dt));
+      // Bonded galgos follow the player anywhere — no home leash
+      _dir.subVectors(playerPos, galgo.mesh.position).normalize();
+      moveGalgo(galgo, 5, dt, false);
     }
   }
 
@@ -178,14 +190,16 @@ export function openCareMenu(galgo) {
   const sit = document.getElementById('care-sit');
   const food = document.getElementById('care-food');
   const touch = document.getElementById('care-touch');
+  const foodLocked = galgo.trust < 20;
+  const touchLocked = galgo.trust < 50;
   sit.disabled = galgo.cooldowns.sit > 0;
-  food.disabled = galgo.trust < 20 || galgo.cooldowns.food > 0;
-  touch.disabled = galgo.trust < 50 || galgo.cooldowns.touch > 0;
+  food.disabled = foodLocked || galgo.cooldowns.food > 0;
+  touch.disabled = touchLocked || galgo.cooldowns.touch > 0;
   sit.textContent = careButtonLabel('Sit nearby quietly (+3 trust)', galgo.cooldowns.sit);
-  food.textContent = galgo.trust < 20
+  food.textContent = foodLocked
     ? 'Offer food (needs more trust)'
     : careButtonLabel('Offer food (+8 trust)', galgo.cooldowns.food);
-  touch.textContent = galgo.trust < 50
+  touch.textContent = touchLocked
     ? 'Gentle touch (needs more trust)'
     : careButtonLabel('Gentle touch (+12 trust)', galgo.cooldowns.touch);
   // Spec §8.3 — bonded galgos can share a quiet inner monologue

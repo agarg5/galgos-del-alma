@@ -1,7 +1,8 @@
 // Dialogue system: UI + Anthropic API streaming
 import { state } from './state.js';
 import { discoverGalgo } from './galgos.js';
-import { showMilestone } from './hud.js';
+import { showMilestone, showTimedOverlay } from './hud.js';
+import { CHAT_MODEL, CHAT_MAX_TOKENS, CHAT_THINKING, MAX_MESSAGES } from '../chat-config.js';
 
 export function openDialogue(npc) {
   if (state.dialogueActive) return;
@@ -37,7 +38,7 @@ function renderHistory() {
 // pruning to the last N entries the array can start with an assistant turn,
 // which would 400 — drop leading assistant messages.
 function apiMessages(history) {
-  const msgs = history.slice(-20);
+  const msgs = history.slice(-MAX_MESSAGES);
   while (msgs.length && msgs[0].role !== 'user') msgs.shift();
   return msgs;
 }
@@ -58,11 +59,9 @@ async function streamCompletion(systemPrompt, messages, onDelta) {
           'anthropic-dangerous-direct-browser-access': 'true',
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-5',
-          max_tokens: 300,
-          // Sonnet 5 runs adaptive thinking by default; disable it so the
-          // 300-token budget goes to dialogue, not reasoning.
-          thinking: { type: 'disabled' },
+          model: CHAT_MODEL,
+          max_tokens: CHAT_MAX_TOKENS,
+          thinking: CHAT_THINKING,
           system: systemPrompt,
           messages,
           stream: true,
@@ -114,29 +113,50 @@ async function streamCompletion(systemPrompt, messages, onDelta) {
   return text;
 }
 
-// Spec §14.1 — NPCs hold pieces of the map. These additions steer the LLM to
-// drop the hint in character; the actual unlock is deterministic (below).
+// Spec §14.1 — NPCs hold pieces of the map. Each entry drives BOTH the
+// in-character prompt nudge and the deterministic unlock from one gate:
+// the nudge is injected on the exchange that will trigger the unlock, and
+// the unlock fires once the NPC has completed `unlockAfterExchanges` replies.
+const DISCOVERIES = [
+  {
+    npcId: 'veterinaria',
+    unlockAfterExchanges: 1,
+    pending: () => !state.lunaHinted,
+    promptAddition: '\n\nIMPORTANT for this conversation: early on, mention that you have heard reports of an abandoned galgo spotted out in the dehesa — thin, fawn-colored, very skittish. You are worried about her and hope someone checks on her.',
+    unlock() {
+      state.lunaHinted = true;
+      localStorage.setItem('luna_hinted', 'true');
+      showMilestone('Dr. Amparo mentioned a galgo out in the dehesa. Maybe you should look for her.');
+    },
+  },
+  {
+    npcId: 'cazador',
+    unlockAfterExchanges: 2,
+    pending: () => {
+      const rayo = state.galgos.find(g => g.id === 'rayo');
+      return rayo && !rayo.discovered;
+    },
+    promptAddition: '\n\nIMPORTANT for this conversation: at some point, let slip that after the season ended you left a brindle galgo near the edge of the village — you could not keep him and did not want to deal with it. You are a little defensive about it.',
+    unlock() {
+      discoverGalgo('rayo');
+      showMilestone('A brindle galgo has been left near the village outskirts. Rayo.');
+    },
+  },
+];
+
+const completedExchanges = npc => npc.history.filter(m => m.role === 'assistant').length;
+
 function discoveryPromptAddition(npc) {
-  if (npc.id === 'veterinaria' && localStorage.getItem('luna_hinted') !== 'true') {
-    return '\n\nIMPORTANT for this conversation: early on, mention that you have heard reports of an abandoned galgo spotted out in the dehesa — thin, fawn-colored, very skittish. You are worried about her and hope someone checks on her.';
-  }
-  const rayo = state.galgos.find(g => g.id === 'rayo');
-  if (npc.id === 'cazador' && rayo && !rayo.discovered && npc.history.length >= 2) {
-    return '\n\nIMPORTANT for this conversation: at some point, let slip that after the season ended you left a brindle galgo near the edge of the village — you could not keep him and did not want to deal with it. You are a little defensive about it.';
-  }
-  return '';
+  const d = DISCOVERIES.find(d => d.npcId === npc.id);
+  return d && d.pending() && completedExchanges(npc) >= d.unlockAfterExchanges - 1
+    ? d.promptAddition
+    : '';
 }
 
 function handleDiscoveryUnlocks(npc) {
-  if (npc.id === 'veterinaria' && localStorage.getItem('luna_hinted') !== 'true') {
-    localStorage.setItem('luna_hinted', 'true');
-    showMilestone('Dr. Amparo mentioned a galgo out in the dehesa. Maybe you should look for her.');
-  }
-  const rayo = state.galgos.find(g => g.id === 'rayo');
-  // Second completed exchange with Miguel: he lets the brindle galgo slip.
-  if (npc.id === 'cazador' && rayo && !rayo.discovered && npc.history.length >= 4) {
-    discoverGalgo('rayo');
-    showMilestone('A brindle galgo has been left near the village outskirts. Rayo.');
+  const d = DISCOVERIES.find(d => d.npcId === npc.id);
+  if (d && d.pending() && completedExchanges(npc) >= d.unlockAfterExchanges) {
+    d.unlock();
   }
 }
 
@@ -148,7 +168,8 @@ export async function sendMessage() {
   input.value = '';
 
   const npc = state.currentNPC;
-  npc.history.push({ role: 'user', content: text });
+  const userMsg = { role: 'user', content: text };
+  npc.history.push(userMsg);
   renderHistory();
 
   state.streaming = true;
@@ -180,8 +201,8 @@ export async function sendMessage() {
 
     if (npcText) {
       npc.history.push({ role: 'assistant', content: npcText });
-      if (npc.history.length > 20) {
-        npc.history = npc.history.slice(-20);
+      if (npc.history.length > MAX_MESSAGES) {
+        npc.history = npc.history.slice(-MAX_MESSAGES);
       }
       localStorage.setItem(`npc_${npc.id}_history`, JSON.stringify(npc.history));
 
@@ -192,7 +213,17 @@ export async function sendMessage() {
       handleDiscoveryUnlocks(npc);
     }
   } catch (err) {
-    msgDiv.textContent = `[${npc.name} pauses — the words don't come. (${err.message})]`;
+    // Roll the failed user turn back out of history so the conversation
+    // isn't stuck with consecutive user messages (the API rejects those)
+    // or an oversized message that fails validation on every retry.
+    const idx = npc.history.lastIndexOf(userMsg);
+    if (idx !== -1) npc.history.splice(idx, 1);
+    // Keep any partially streamed reply visible; append the error separately.
+    const errDiv = msgDiv.textContent ? document.createElement('div') : msgDiv;
+    errDiv.className = 'msg npc';
+    errDiv.textContent = `[${npc.name} pauses — the words don't come. (${err.message})]`;
+    if (errDiv !== msgDiv) historyEl.appendChild(errDiv);
+    historyEl.scrollTop = historyEl.scrollHeight;
   }
 
   state.streaming = false;
@@ -212,13 +243,12 @@ export async function requestWhisper(galgo) {
       [{ role: 'user', content: 'The person you trust kneels beside you quietly.' }],
       textSoFar => { el.textContent = textSoFar; }
     );
-    if (!text) el.style.display = 'none';
+    if (text) showTimedOverlay(el, text, 9000);
+    else el.style.display = 'none';
   } catch {
     el.style.display = 'none';
   }
   state.streaming = false;
-  clearTimeout(el._hideTimer);
-  el._hideTimer = setTimeout(() => { el.style.display = 'none'; }, 9000);
 }
 
 export function initDialogueListeners() {

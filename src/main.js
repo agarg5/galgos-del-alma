@@ -41,17 +41,25 @@ function init() {
 
 let secondsPlayed = 0;
 let talkedToNPC = false;
+let idleNpcHintDone = false;
+let exploreHintDone = false;
 
-// Spec §14.2 — contextual hints when the player seems stuck
+// Spec §14.2 — contextual hints when the player seems stuck.
+// Each check runs until it fires once, then goes quiet for good.
 function checkContextualHints(dt) {
   secondsPlayed += dt;
   if (!talkedToNPC && state.dialogueActive) talkedToNPC = true;
-  if (!talkedToNPC && secondsPlayed > 120) {
-    showHint('idle-npc', 'The people of this village each know something. Try talking to someone.');
+  if (!idleNpcHintDone && secondsPlayed > 120) {
+    idleNpcHintDone = true;
+    if (!talkedToNPC) {
+      showHint('idle-npc', 'The people of this village each know something. Try talking to someone.');
+    }
   }
-  const undiscovered = state.galgos.some(g => !g.discovered);
-  if (undiscovered && secondsPlayed > 300) {
-    showHint('idle-explore', 'Ask around — someone may know where other galgos have been seen.');
+  if (!exploreHintDone && secondsPlayed > 300) {
+    exploreHintDone = true;
+    if (state.galgos.some(g => !g.discovered)) {
+      showHint('idle-explore', 'Ask around — someone may know where other galgos have been seen.');
+    }
   }
 }
 

@@ -1,6 +1,6 @@
 // Player mesh and controller
 import * as THREE from 'three';
-import { state } from './state.js';
+import { state, WORLD_BOUND } from './state.js';
 import { terrainHeight } from './world.js';
 
 export function buildPlayer() {
@@ -54,7 +54,7 @@ export function updatePlayer(dt) {
         break;
       }
     }
-    if (Math.abs(newX) > 220 || Math.abs(newZ) > 220) blocked = true;
+    if (Math.abs(newX) > WORLD_BOUND || Math.abs(newZ) > WORLD_BOUND) blocked = true;
 
     if (!blocked) {
       pp.x = newX;

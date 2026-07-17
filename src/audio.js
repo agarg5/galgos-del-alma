@@ -6,6 +6,7 @@ let ctx = null;
 let masterGain = null;
 let enabled = false;
 let footstepTimer = 0;
+let noiseBuffer = null;
 
 function ensureContext() {
   if (ctx) return;
@@ -30,17 +31,20 @@ function ensureContext() {
   windGain.connect(masterGain);
   wind.start();
   lfo.start();
+
+  // One shared decaying-noise buffer; footsteps reuse it instead of filling
+  // a fresh AudioBuffer on every step.
+  const noiseLen = Math.floor(ctx.sampleRate * 0.1);
+  noiseBuffer = ctx.createBuffer(1, noiseLen, ctx.sampleRate);
+  const data = noiseBuffer.getChannelData(0);
+  for (let i = 0; i < noiseLen; i++) {
+    data[i] = (Math.random() * 2 - 1) * (1 - i / noiseLen);
+  }
 }
 
 function noiseBurst(duration, gainValue, filterFreq) {
-  const bufferSize = Math.floor(ctx.sampleRate * duration);
-  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < bufferSize; i++) {
-    data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
-  }
   const src = ctx.createBufferSource();
-  src.buffer = buffer;
+  src.buffer = noiseBuffer;
   const filter = ctx.createBiquadFilter();
   filter.type = 'lowpass';
   filter.frequency.value = filterFreq;
@@ -49,7 +53,7 @@ function noiseBurst(duration, gainValue, filterFreq) {
   src.connect(filter);
   filter.connect(g);
   g.connect(masterGain);
-  src.start();
+  src.start(0, 0, duration);
 }
 
 export function playChime() {

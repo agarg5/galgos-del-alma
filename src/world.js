@@ -148,14 +148,23 @@ export function buildWorld() {
   }
   state.scene.add(grassMesh);
 
-  // Roads — short segments that follow the terrain so they don't clip on slopes
-  const roadMat = new THREE.MeshLambertMaterial({ color: 0xB89860 });
-  const addRoadSegment = (x, z, w, d) => {
-    const seg = new THREE.Mesh(new THREE.BoxGeometry(w, 0.08, d), roadMat);
+  // Roads — short segments that follow the terrain so they don't clip on
+  // slopes, instanced so they still render in a single draw call.
+  const segments = [];
+  for (let x = -50; x <= 30; x += 8) segments.push([x, -20, 8.4, 4]);
+  for (let z = -30; z <= 30; z += 8) segments.push([0, z, 4, 8.4]);
+  const roadMesh = new THREE.InstancedMesh(
+    new THREE.BoxGeometry(1, 0.08, 1),
+    new THREE.MeshLambertMaterial({ color: 0xB89860 }),
+    segments.length
+  );
+  const seg = new THREE.Object3D();
+  segments.forEach(([x, z, w, d], i) => {
     seg.position.set(x, terrainHeight(x, z) + 0.06, z);
-    seg.receiveShadow = true;
-    state.scene.add(seg);
-  };
-  for (let x = -50; x <= 30; x += 8) addRoadSegment(x, -20, 8.4, 4);
-  for (let z = -30; z <= 30; z += 8) addRoadSegment(0, z, 4, 8.4);
+    seg.scale.set(w, 1, d);
+    seg.updateMatrix();
+    roadMesh.setMatrixAt(i, seg.matrix);
+  });
+  roadMesh.receiveShadow = true;
+  state.scene.add(roadMesh);
 }
