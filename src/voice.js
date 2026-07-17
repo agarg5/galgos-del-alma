@@ -55,6 +55,12 @@ export function stopSpeaking() {
   document.getElementById('voice-stop').style.display = 'none';
 }
 
+// Abort any in-progress recognition (e.g. when the dialogue closes) so a
+// late transcript can't auto-send into the wrong conversation.
+export function stopListening() {
+  if (listening) recognizer?.abort();
+}
+
 // --- Speech-to-text -------------------------------------------------------
 
 let recognizer = null;

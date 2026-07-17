@@ -118,7 +118,10 @@ function scheduleMusic() {
 }
 
 function startMusic() {
-  musicScheduledUntil = ctx.currentTime;
+  // Never rewind the schedule: a quick mute→unmute leaves already-scheduled
+  // (inaudible while muted) notes in flight, and rescheduling from "now"
+  // would layer a second progression on top of them.
+  musicScheduledUntil = Math.max(musicScheduledUntil, ctx.currentTime);
   scheduleMusic();
   musicTimer = setInterval(scheduleMusic, 2000);
 }
