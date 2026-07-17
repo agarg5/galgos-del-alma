@@ -36,26 +36,31 @@ export function saveGame() {
 // Apply the saved session on top of a freshly built world. Call after
 // buildPlayer() and buildGalgos().
 export function restoreGame() {
-  let save;
+  // A malformed save must never abort startup — the start screen is already
+  // hidden by the time this runs. On any problem, drop the save and start
+  // from the defaults (trust/discovery keys are stored separately and keep
+  // the real progress).
   try {
-    save = JSON.parse(localStorage.getItem(SAVE_KEY));
+    const save = JSON.parse(localStorage.getItem(SAVE_KEY));
+    if (!save || save.v !== 1) return;
+
+    if (Number.isFinite(save.player?.x) && Number.isFinite(save.player?.z)) {
+      state.player.position.x = save.player.x;
+      state.player.position.z = save.player.z;
+    }
+    if (Number.isFinite(save.player?.angle)) state.cameraAngle = save.player.angle;
+    if (Number.isFinite(save.player?.pitch)) state.cameraPitch = save.player.pitch;
+
+    state.galgos.forEach(g => {
+      const gs = save.galgos?.[g.id];
+      if (!gs || !Number.isFinite(gs.x) || !Number.isFinite(gs.z)) return;
+      g.mesh.position.x = gs.x;
+      g.mesh.position.z = gs.z;
+      g.cooldowns = { sit: 0, food: 0, touch: 0, ...gs.cooldowns };
+    });
   } catch {
-    return;
+    localStorage.removeItem(SAVE_KEY);
   }
-  if (!save || save.v !== 1) return;
-
-  state.player.position.x = save.player.x;
-  state.player.position.z = save.player.z;
-  state.cameraAngle = save.player.angle;
-  state.cameraPitch = save.player.pitch;
-
-  state.galgos.forEach(g => {
-    const gs = save.galgos[g.id];
-    if (!gs) return;
-    g.mesh.position.x = gs.x;
-    g.mesh.position.z = gs.z;
-    g.cooldowns = { sit: 0, food: 0, touch: 0, ...gs.cooldowns };
-  });
 }
 
 export function startAutosave() {
