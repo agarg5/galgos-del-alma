@@ -1,7 +1,7 @@
 // NPC definitions, meshes, patrol
 import * as THREE from 'three';
 import { state } from './state.js';
-import { terrainHeight } from './world.js';
+import { terrainHeight, insideBuilding } from './world.js';
 
 const NPC_DEFS = [
   {
@@ -18,13 +18,13 @@ const NPC_DEFS = [
   },
   {
     id: 'alcalde', name: 'Don Bernardo (El Alcalde)',
-    x: -45, z: -22, color: 0x2C2C5E, height: 1.7,
+    x: -37, z: -27, color: 0x2C2C5E, height: 1.7,
     patrolRadius: 0, patrolSpeed: 0,
     system: `You are Alcalde Don Bernardo, the mayor of this small Spanish village. You care about your village and your re-election. You are not hostile to animal welfare but you fear upsetting the hunters who vote for you. You are persuadable with the right arguments — economics, tourism, public image. You speak in measured, political sentences.`,
   },
   {
     id: 'adoptante', name: 'Clara (La Adoptante)',
-    x: 8, z: 5, color: 0xC77D5A, height: 1.55,
+    x: 12, z: 2, color: 0xC77D5A, height: 1.55,
     patrolRadius: 0, patrolSpeed: 0,
     system: `You are Clara, a 34-year-old graphic designer who lives alone in a quiet apartment in Madrid. You work from home. You want to adopt a galgo but you are nervous — you have never had a dog. Ask the player about the galgo they are recommending. Be genuinely moved if the match sounds right. You are curious, gentle, and a little anxious.`,
   },
@@ -51,6 +51,9 @@ function makeNPCMesh(color, height) {
 
 export function buildNPCs() {
   NPC_DEFS.forEach(def => {
+    if (insideBuilding(def.x, def.z)) {
+      console.warn(`NPC "${def.id}" spawns inside a building at (${def.x}, ${def.z}) — fix its position`);
+    }
     const mesh = makeNPCMesh(def.color, def.height);
     mesh.position.set(def.x, terrainHeight(def.x, def.z), def.z);
     state.scene.add(mesh);
