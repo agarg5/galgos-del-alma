@@ -310,7 +310,11 @@ The project has been restructured from a single HTML file to a modular Vite proj
 	•	src/hud.js — trust panel, zone indicator, milestones
 	•	src/input.js — keyboard + mouse input
 	•	src/main.js — entry point
+	•	src/audio.js — Web Audio ambience (wind, footsteps, chimes; muted by default)
 	•	api/chat.js — Vercel serverless proxy for Anthropic API (key stored server-side)
+	•	dev-api.js + vite.config.js — local stand-in for the serverless proxy during development
+
+Implemented from this spec (2026-07-17): galgo discovery flow (§14.1), tutorial and contextual hints (§14.2), "???" trust slots, galgo whisper (§8.3), ambient audio (§11), terrain-height grounding for all characters, player-following shadows.
 
 Deployed at: https://galgos-del-alma.vercel.app
 Repo: https://github.com/agarg5/galgos-del-alma

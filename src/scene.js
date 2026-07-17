@@ -34,10 +34,20 @@ export function initScene() {
   sun.shadow.camera.near = 50;
   sun.shadow.camera.far = 300;
   state.scene.add(sun);
+  state.scene.add(sun.target);
+  state.sun = sun;
 
   window.addEventListener('resize', () => {
     state.camera.aspect = window.innerWidth / window.innerHeight;
     state.camera.updateProjectionMatrix();
     state.renderer.setSize(window.innerWidth, window.innerHeight);
   });
+}
+
+// The shadow camera only covers ±80 units — recenter it on the player so
+// shadows exist everywhere in the 500-unit world, not just near the origin.
+export function updateSun() {
+  const pp = state.player.position;
+  state.sun.position.set(pp.x + 100, 120, pp.z + 60);
+  state.sun.target.position.set(pp.x, 0, pp.z);
 }

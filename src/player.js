@@ -1,6 +1,7 @@
 // Player mesh and controller
 import * as THREE from 'three';
-import { state } from './state.js';
+import { state, WORLD_BOUND } from './state.js';
+import { terrainHeight } from './world.js';
 
 export function buildPlayer() {
   const playerMesh = new THREE.Group();
@@ -8,22 +9,23 @@ export function buildPlayer() {
     new THREE.CylinderGeometry(0.4, 0.35, 1.6, 8),
     new THREE.MeshLambertMaterial({ color: 0xD2B48C })
   );
-  body.position.y = 1.3;
+  body.position.y = 0.8;
   body.castShadow = true;
   playerMesh.add(body);
   const head = new THREE.Mesh(
     new THREE.SphereGeometry(0.35, 8, 6),
     new THREE.MeshLambertMaterial({ color: 0xE8C9A0 })
   );
-  head.position.y = 2.4;
+  head.position.y = 1.95;
   head.castShadow = true;
   playerMesh.add(head);
-  playerMesh.position.set(-20, 0, -10);
+  playerMesh.position.set(-20, terrainHeight(-20, -10), -10);
   state.scene.add(playerMesh);
   state.player = playerMesh;
 }
 
 export function updatePlayer(dt) {
+  state.moving = false;
   if (state.dialogueActive || state.careMenuActive) return;
 
   const pp = state.player.position;
@@ -52,14 +54,16 @@ export function updatePlayer(dt) {
         break;
       }
     }
-    if (Math.abs(newX) > 220 || Math.abs(newZ) > 220) blocked = true;
+    if (Math.abs(newX) > WORLD_BOUND || Math.abs(newZ) > WORLD_BOUND) blocked = true;
 
     if (!blocked) {
       pp.x = newX;
       pp.z = newZ;
+      state.moving = true;
     }
     state.player.rotation.y = Math.atan2(dir.x, dir.z);
   }
+  pp.y = terrainHeight(pp.x, pp.z);
 }
 
 export function updateCamera() {
