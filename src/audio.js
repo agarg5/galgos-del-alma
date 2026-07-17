@@ -42,7 +42,7 @@ function ensureContext() {
   }
 }
 
-function noiseBurst(duration, gainValue, filterFreq) {
+function noiseBurst(gainValue, filterFreq) {
   const src = ctx.createBufferSource();
   src.buffer = noiseBuffer;
   const filter = ctx.createBiquadFilter();
@@ -53,7 +53,9 @@ function noiseBurst(duration, gainValue, filterFreq) {
   src.connect(filter);
   filter.connect(g);
   g.connect(masterGain);
-  src.start(0, 0, duration);
+  // Play the whole buffer — its envelope decays to zero, so cutting it
+  // short would end at nonzero amplitude and click.
+  src.start();
 }
 
 export function playChime() {
@@ -81,7 +83,7 @@ export function updateFootsteps(dt) {
   footstepTimer -= dt;
   if (footstepTimer <= 0) {
     footstepTimer = 0.38;
-    noiseBurst(0.07, 0.25, 900);
+    noiseBurst(0.25, 900);
   }
 }
 

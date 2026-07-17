@@ -84,6 +84,13 @@ export function showMilestone(text) {
 const shownHints = new Set();
 const hintQueue = [];
 
+function displayHint(id, text) {
+  // Mark shown only when actually displayed, so a queued hint that never
+  // got its turn (page closed) can still appear next session.
+  localStorage.setItem(`hint_${id}_shown`, 'true');
+  showTimedOverlay(document.getElementById('hint'), text, 8000);
+}
+
 export function showHint(id, text) {
   if (shownHints.has(id)) return;
   if (localStorage.getItem(`hint_${id}_shown`) === 'true') {
@@ -91,17 +98,16 @@ export function showHint(id, text) {
     return;
   }
   shownHints.add(id);
-  localStorage.setItem(`hint_${id}_shown`, 'true');
   const el = document.getElementById('hint');
   if (el.style.display === 'block') {
-    hintQueue.push(text);
+    hintQueue.push({ id, text });
     return;
   }
   el._onHidden = () => {
     const next = hintQueue.shift();
-    if (next) showTimedOverlay(el, next, 8000);
+    if (next) displayHint(next.id, next.text);
   };
-  showTimedOverlay(el, text, 8000);
+  displayHint(id, text);
 }
 
 export function updateProximityPrompt() {

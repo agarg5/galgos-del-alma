@@ -76,6 +76,12 @@ export function buildGalgos() {
     state.galgos.push(galgo);
     if (def.id === 'luna') luna = galgo;
   });
+  // Migration companion: if Luna is already discovered, the vet's hint arc
+  // is moot — mark it done so she doesn't hint at a galgo the player knows.
+  if (luna?.discovered && !state.lunaHinted) {
+    state.lunaHinted = true;
+    localStorage.setItem('luna_hinted', 'true');
+  }
 }
 
 // Spec §14.1 — galgos enter the world through NPC conversations, not all at once.

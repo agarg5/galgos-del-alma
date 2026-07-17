@@ -14,10 +14,15 @@ export function openDialogue(npc) {
   document.getElementById('dialogue-input').focus();
 }
 
+let streamAbort = null;
+
 export function closeDialogue() {
   state.dialogueActive = false;
   document.getElementById('dialogue-overlay').style.display = 'none';
   state.currentNPC = null;
+  // Abort any in-flight reply so a stalled connection can't leave the
+  // streaming lock (and the send button) stuck for the next conversation.
+  streamAbort?.abort();
 }
 
 function renderHistory() {
@@ -46,12 +51,13 @@ function apiMessages(history) {
 // Stream a completion through the serverless proxy (default) or directly
 // against the Anthropic API when the player supplied their own key.
 // Calls onDelta(textSoFar) as tokens arrive; returns the full text.
-async function streamCompletion(systemPrompt, messages, onDelta) {
+async function streamCompletion(systemPrompt, messages, onDelta, signal) {
   const apiKey = sessionStorage.getItem('anthropic_key');
 
   const res = apiKey
     ? await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
+        signal,
         headers: {
           'Content-Type': 'application/json',
           'x-api-key': apiKey,
@@ -69,6 +75,7 @@ async function streamCompletion(systemPrompt, messages, onDelta) {
       })
     : await fetch('/api/chat', {
         method: 'POST',
+        signal,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ system: systemPrompt, messages }),
       });
@@ -189,6 +196,7 @@ export async function sendMessage() {
   msgDiv.className = 'msg npc';
   historyEl.appendChild(msgDiv);
 
+  streamAbort = new AbortController();
   try {
     const npcText = await streamCompletion(
       systemPrompt,
@@ -196,34 +204,49 @@ export async function sendMessage() {
       textSoFar => {
         msgDiv.textContent = textSoFar;
         historyEl.scrollTop = historyEl.scrollHeight;
-      }
+      },
+      streamAbort.signal
     );
+    // An empty reply (e.g. the proxy's upstream died right after headers)
+    // must take the rollback path too, or the dangling user turn breaks
+    // role alternation on the next send.
+    if (!npcText) throw new Error('no reply');
 
-    if (npcText) {
-      npc.history.push({ role: 'assistant', content: npcText });
-      if (npc.history.length > MAX_MESSAGES) {
-        npc.history = npc.history.slice(-MAX_MESSAGES);
-      }
-      localStorage.setItem(`npc_${npc.id}_history`, JSON.stringify(npc.history));
+    npc.history.push({ role: 'assistant', content: npcText });
+    if (npc.history.length > MAX_MESSAGES) {
+      npc.history = npc.history.slice(-MAX_MESSAGES);
+    }
+    localStorage.setItem(`npc_${npc.id}_history`, JSON.stringify(npc.history));
 
-      const summaryText = `Last spoke about: "${text.slice(0, 60)}". NPC responded about: "${npcText.slice(0, 80)}".`;
-      npc.summary = summaryText;
-      localStorage.setItem(`npc_${npc.id}_summary`, summaryText);
+    const summaryText = `Last spoke about: "${text.slice(0, 60)}". NPC responded about: "${npcText.slice(0, 80)}".`;
+    npc.summary = summaryText;
+    localStorage.setItem(`npc_${npc.id}_summary`, summaryText);
 
-      handleDiscoveryUnlocks(npc);
+    handleDiscoveryUnlocks(npc);
+
+    // If the player closed and reopened this dialogue mid-stream, the live
+    // panel was rebuilt without our streaming div — re-render from history.
+    if (state.dialogueActive && state.currentNPC === npc && !msgDiv.isConnected) {
+      renderHistory();
     }
   } catch (err) {
     // Roll the failed user turn back out of history so the conversation
     // isn't stuck with consecutive user messages (the API rejects those)
-    // or an oversized message that fails validation on every retry.
-    const idx = npc.history.lastIndexOf(userMsg);
-    if (idx !== -1) npc.history.splice(idx, 1);
-    // Keep any partially streamed reply visible; append the error separately.
-    const errDiv = msgDiv.textContent ? document.createElement('div') : msgDiv;
-    errDiv.className = 'msg npc';
-    errDiv.textContent = `[${npc.name} pauses — the words don't come. (${err.message})]`;
-    if (errDiv !== msgDiv) historyEl.appendChild(errDiv);
-    historyEl.scrollTop = historyEl.scrollHeight;
+    // or an oversized message that fails validation on every retry. Only
+    // if it's still the last entry — if the assistant reply already landed
+    // the exchange succeeded and removing the user turn would break
+    // alternation the other way.
+    if (npc.history[npc.history.length - 1] === userMsg) npc.history.pop();
+    // Only touch the panel if it still shows THIS NPC's conversation.
+    if (state.dialogueActive && state.currentNPC === npc) {
+      // Keep any partially streamed reply visible; append the error separately.
+      const errDiv = msgDiv.textContent && msgDiv.isConnected
+        ? document.createElement('div') : msgDiv;
+      errDiv.className = 'msg npc';
+      errDiv.textContent = `[${npc.name} pauses — the words don't come. (${err.message})]`;
+      if (!errDiv.isConnected) historyEl.appendChild(errDiv);
+      historyEl.scrollTop = historyEl.scrollHeight;
+    }
   }
 
   state.streaming = false;
@@ -234,6 +257,10 @@ export async function sendMessage() {
 export async function requestWhisper(galgo) {
   if (state.streaming) return;
   state.streaming = true;
+  // The whisper shares the streaming lock with dialogue — reflect that in
+  // the send button so a send attempted mid-whisper doesn't look ignored.
+  const sendBtn = document.getElementById('dialogue-send');
+  sendBtn.disabled = true;
   const el = document.getElementById('whisper');
   el.textContent = '...';
   el.style.display = 'block';
@@ -249,6 +276,7 @@ export async function requestWhisper(galgo) {
     el.style.display = 'none';
   }
   state.streaming = false;
+  sendBtn.disabled = false;
 }
 
 export function initDialogueListeners() {
